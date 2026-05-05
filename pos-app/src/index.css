@@ -1,0 +1,62 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background:  0 0% 98%;
+    --foreground:  20 14% 10%;
+
+    --border:      30 15% 88%;
+    --input:       30 15% 88%;
+    --ring:        27 96% 45%;
+
+    /* POS amber primary */
+    --primary:          27 96% 45%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary:        30 20% 94%;
+    --secondary-foreground: 20 14% 20%;
+
+    --muted:            30 15% 94%;
+    --muted-foreground: 20 10% 48%;
+
+    --accent:           30 40% 91%;
+    --accent-foreground: 20 14% 15%;
+
+    --destructive:      0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success:          142 71% 38%;
+    --success-foreground: 0 0% 100%;
+
+    /* Cart panel — slightly warm white */
+    --cart:        30 20% 97%;
+    --cart-border: 30 15% 85%;
+
+    --radius: 0.6rem;
+  }
+}
+
+@layer base {
+  * { @apply border-border box-border; }
+  body {
+    @apply bg-background text-foreground m-0;
+    font-family: system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    user-select: none;          /* POS screens don't need text selection */
+    overscroll-behavior: none;
+  }
+  #root { @apply h-screen w-screen overflow-hidden flex flex-col; }
+}
+
+/* Thin scrollbar for cart + product grid */
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar        { width: 4px; }
+  .scrollbar-thin::-webkit-scrollbar-track  { background: transparent; }
+  .scrollbar-thin::-webkit-scrollbar-thumb  { background: hsl(var(--border)); border-radius: 99px; }
+}

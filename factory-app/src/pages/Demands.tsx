@@ -1,0 +1,561 @@
+import { useEffect, useState } from 'react';
+import {
+  Loader2,
+  Search,
+  AlertCircle,
+  Plus,
+  X,
+  CheckCircle2,
+  XCircle,
+  ChevronDown,
+  PackageCheck,
+} from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import {
+  factoryApi,
+  type Demand,
+  type DemandStatus,
+  type DemandPriority,
+  type DemandType,
+  type CreateDemandBody,
+} from '@/api/factory.api';
+import { useAuthStore } from '@/store/auth.store';
+
+// ─── Config ────────────────────────────────────────────────────────────────
+
+const STATUS_TABS: { label: string; value: DemandStatus | 'ALL' }[] = [
+  { label: 'All',            value: 'ALL' },
+  { label: 'Draft',          value: 'DRAFT' },
+  { label: 'Pending Mgr',    value: 'PENDING_MANAGER' },
+  { label: 'Pending Admin',  value: 'PENDING_ADMIN' },
+  { label: 'Approved',       value: 'APPROVED' },
+  { label: 'Completed',      value: 'COMPLETED' },
+  { label: 'Rejected',       value: 'REJECTED' },
+];
+
+const STATUS_BADGE: Record<DemandStatus, { label: string; variant: 'warning' | 'info' | 'success' | 'secondary' | 'destructive' | 'default' }> = {
+  DRAFT:           { label: 'Draft',          variant: 'secondary' },
+  PENDING_MANAGER: { label: 'Pending Mgr',    variant: 'warning' },
+  PENDING_ADMIN:   { label: 'Pending Admin',  variant: 'info' },
+  APPROVED:        { label: 'Approved',       variant: 'success' },
+  COMPLETED:       { label: 'Completed',      variant: 'default' },
+  REJECTED:        { label: 'Rejected',       variant: 'destructive' },
+  CANCELLED:       { label: 'Cancelled',      variant: 'secondary' },
+};
+
+const PRIORITY_COLOR: Record<DemandPriority, string> = {
+  LOW:    'bg-slate-400',
+  MEDIUM: 'bg-blue-500',
+  HIGH:   'bg-amber-500',
+  URGENT: 'bg-red-500',
+};
+
+const UNITS = ['kg', 'g', 'pcs', 'litres', 'rolls', 'reams', 'boxes', 'bottles'] as const;
+const DEMAND_TYPES: { value: DemandType; label: string }[] = [
+  { value: 'RAW_MATERIAL', label: 'Raw Material' },
+  { value: 'PACKAGING',    label: 'Packaging' },
+  { value: 'STATIONARY',   label: 'Stationary' },
+];
+
+// ─── Create Demand Modal ───────────────────────────────────────────────────
+
+interface CreateDemandModalProps {
+  onClose: () => void;
+  onCreated: (d: Demand) => void;
+}
+
+function CreateDemandModal({ onClose, onCreated }: CreateDemandModalProps) {
+  const [form, setForm] = useState<CreateDemandBody>({
+    demandType: 'RAW_MATERIAL',
+    itemName: '',
+    quantity: 0,
+    unit: 'kg',
+    priority: 'MEDIUM',
+    dueDate: '',
+    notes: '',
+    saveAsDraft: false,
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  function set<K extends keyof CreateDemandBody>(key: K, val: CreateDemandBody[K]) {
+    setForm((f) => ({ ...f, [key]: val }));
+  }
+
+  async function handleSubmit(asDraft: boolean) {
+    if (!form.itemName.trim()) { setError('Item name is required.'); return; }
+    if (!form.quantity || form.quantity <= 0) { setError('Quantity must be > 0.'); return; }
+    if (!form.dueDate) { setError('Due date is required.'); return; }
+
+    setError('');
+    setSaving(true);
+    try {
+      const { data } = await factoryApi.createDemand({ ...form, saveAsDraft: asDraft });
+      onCreated(data);
+      onClose();
+    } catch {
+      setError('Failed to create demand. Try again.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40">
+      <div className="w-full sm:max-w-md bg-background rounded-t-2xl sm:rounded-2xl overflow-hidden shadow-xl">
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b">
+          <h2 className="font-semibold text-base">New Demand</h2>
+          <button
+            onClick={onClose}
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-muted/60 hover:bg-muted"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Form */}
+        <div className="px-5 py-4 space-y-4 max-h-[70vh] overflow-y-auto">
+          {error && (
+            <div className="flex items-center gap-2 rounded-xl bg-red-50 border border-red-200 px-3 py-2.5 text-sm text-red-700">
+              <AlertCircle className="h-4 w-4 shrink-0" /> {error}
+            </div>
+          )}
+
+          {/* Demand Type */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              Demand Type
+            </label>
+            <div className="relative">
+              <select
+                value={form.demandType}
+                onChange={(e) => set('demandType', e.target.value as DemandType)}
+                className="w-full appearance-none rounded-xl border bg-background px-3 py-2.5 text-sm pr-8 focus:outline-none focus:ring-2 focus:ring-primary/20"
+              >
+                {DEMAND_TYPES.map(({ value, label }) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            </div>
+          </div>
+
+          {/* Item Name */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              Item Name
+            </label>
+            <Input
+              placeholder="e.g. Chicken Breast"
+              value={form.itemName}
+              onChange={(e) => set('itemName', e.target.value)}
+            />
+          </div>
+
+          {/* Quantity + Unit */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Quantity
+              </label>
+              <Input
+                type="number"
+                inputMode="decimal"
+                placeholder="0"
+                value={form.quantity || ''}
+                onChange={(e) => set('quantity', parseFloat(e.target.value) || 0)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Unit
+              </label>
+              <div className="relative">
+                <select
+                  value={form.unit}
+                  onChange={(e) => set('unit', e.target.value)}
+                  className="w-full appearance-none rounded-xl border bg-background px-3 py-2.5 text-sm pr-8 focus:outline-none focus:ring-2 focus:ring-primary/20"
+                >
+                  {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              </div>
+            </div>
+          </div>
+
+          {/* Priority */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              Priority
+            </label>
+            <div className="flex gap-2 flex-wrap">
+              {(['LOW', 'MEDIUM', 'HIGH', 'URGENT'] as DemandPriority[]).map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => set('priority', p)}
+                  className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                    form.priority === p
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-secondary text-secondary-foreground'
+                  }`}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Due Date */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              Due Date
+            </label>
+            <Input
+              type="date"
+              inputMode="numeric"
+              value={form.dueDate}
+              onChange={(e) => set('dueDate', e.target.value)}
+            />
+          </div>
+
+          {/* Notes */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              Notes (optional)
+            </label>
+            <textarea
+              rows={3}
+              placeholder="Any additional notes…"
+              value={form.notes ?? ''}
+              onChange={(e) => set('notes', e.target.value)}
+              className="w-full rounded-xl border bg-background px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/20"
+            />
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex gap-3 px-5 py-4 border-t">
+          <Button
+            variant="outline"
+            className="flex-1"
+            disabled={saving}
+            onClick={() => handleSubmit(true)}
+          >
+            Save Draft
+          </Button>
+          <Button
+            className="flex-1"
+            disabled={saving}
+            onClick={() => handleSubmit(false)}
+          >
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Submit'}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Reject Modal ──────────────────────────────────────────────────────────
+
+interface RejectModalProps {
+  demandId: string;
+  onClose: () => void;
+  onRejected: (id: string) => void;
+}
+
+function RejectModal({ demandId, onClose, onRejected }: RejectModalProps) {
+  const [comment, setComment] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  async function handleReject() {
+    if (!comment.trim()) return;
+    setSaving(true);
+    try {
+      await factoryApi.rejectDemand(demandId, comment);
+      onRejected(demandId);
+      onClose();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40">
+      <div className="w-full sm:max-w-sm bg-background rounded-t-2xl sm:rounded-2xl overflow-hidden shadow-xl">
+        <div className="flex items-center justify-between px-5 py-4 border-b">
+          <h2 className="font-semibold text-base text-red-600">Reject Demand</h2>
+          <button
+            onClick={onClose}
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-muted/60"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="px-5 py-4 space-y-4">
+          <p className="text-sm text-muted-foreground">Please provide a reason for rejection.</p>
+          <textarea
+            rows={4}
+            autoFocus
+            placeholder="Reason for rejection…"
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            className="w-full rounded-xl border bg-background px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-red-300"
+          />
+        </div>
+        <div className="flex gap-3 px-5 py-4 border-t">
+          <Button variant="outline" className="flex-1" onClick={onClose} disabled={saving}>
+            Cancel
+          </Button>
+          <Button
+            className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+            disabled={saving || !comment.trim()}
+            onClick={handleReject}
+          >
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Reject'}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Page ─────────────────────────────────────────────────────────────
+
+export function Demands() {
+  const user = useAuthStore((s) => s.user);
+  const isManager = user?.role === 'MANAGER';
+
+  const [activeTab, setActiveTab] = useState<DemandStatus | 'ALL'>('ALL');
+  const [demands, setDemands] = useState<Demand[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [search, setSearch] = useState('');
+  const [showCreate, setShowCreate] = useState(false);
+  const [rejectTarget, setRejectTarget] = useState<string | null>(null);
+  const [actionId, setActionId] = useState<string | null>(null);
+
+  function loadDemands(tab: DemandStatus | 'ALL') {
+    setLoading(true);
+    setError('');
+    factoryApi
+      .getDemands(tab)
+      .then(({ data }) => setDemands(data))
+      .catch(() => setError('Could not load demands. Check your connection.'))
+      .finally(() => setLoading(false));
+  }
+
+  useEffect(() => { loadDemands(activeTab); }, [activeTab]);
+
+  // Manager sees all; Staff sees only own demands
+  const visibleDemands = isManager
+    ? demands
+    : demands.filter((d) => d.requestedBy === user?.email);
+
+  const filtered = visibleDemands.filter((d) =>
+    d.itemName.toLowerCase().includes(search.toLowerCase()) ||
+    d.itemCode.toLowerCase().includes(search.toLowerCase()),
+  );
+
+  async function handleApprove(id: string) {
+    setActionId(id);
+    try {
+      const { data } = await factoryApi.approveDemand(id);
+      setDemands((prev) => prev.map((d) => d.id === id ? data : d));
+    } finally {
+      setActionId(null);
+    }
+  }
+
+  async function handleMarkReceived(id: string) {
+    setActionId(id);
+    try {
+      const { data } = await factoryApi.completeDemand(id);
+      setDemands((prev) => prev.map((d) => d.id === id ? data : d));
+    } finally {
+      setActionId(null);
+    }
+  }
+
+  function handleCreated(newDemand: Demand) {
+    setDemands((prev) => [newDemand, ...prev]);
+  }
+
+  function handleRejected(id: string) {
+    setDemands((prev) =>
+      prev.map((d) => d.id === id ? { ...d, status: 'REJECTED' as DemandStatus } : d),
+    );
+  }
+
+  return (
+    <div className="flex flex-col h-full relative">
+      {/* Search + filter */}
+      <div className="px-4 pt-4 pb-2 space-y-3 bg-background border-b">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search demands…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+
+        {/* Status tabs */}
+        <div className="flex gap-2 overflow-x-auto scrollbar-none pb-1">
+          {STATUS_TABS.map(({ label, value }) => (
+            <button
+              key={value}
+              onClick={() => setActiveTab(value)}
+              className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                activeTab === value
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-secondary text-secondary-foreground'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* List */}
+      <div className="flex-1 overflow-y-auto scrollbar-none px-4 py-3 space-y-3 pb-24">
+        {loading && (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        )}
+
+        {error && (
+          <div className="flex items-center gap-2 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            {error}
+          </div>
+        )}
+
+        {!loading && !error && filtered.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+            <p className="text-sm">No demands found</p>
+          </div>
+        )}
+
+        {filtered.map((demand) => {
+          const statusCfg = STATUS_BADGE[demand.status] ?? { label: demand.status, variant: 'secondary' as const };
+          const canApprove = isManager && demand.status === 'PENDING_MANAGER';
+          const canReceive = isManager && demand.status === 'APPROVED';
+
+          return (
+            <Card key={demand.id} className="active:scale-[0.98] transition-transform">
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-sm leading-tight truncate">{demand.itemName}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {demand.itemCode} · {demand.demandType?.replace('_', ' ')}
+                    </p>
+                  </div>
+                  <Badge variant={statusCfg.variant}>{statusCfg.label}</Badge>
+                </div>
+
+                <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                  <span className="font-medium text-foreground">
+                    {demand.quantity} {demand.unit}
+                  </span>
+                  <span>
+                    Due {new Date(demand.dueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                  </span>
+                  <span>by {demand.requestedBy?.split('@')[0]}</span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <div className={`h-2 w-2 rounded-full ${PRIORITY_COLOR[demand.priority]}`} />
+                  <span className="text-xs text-muted-foreground">{demand.priority} priority</span>
+                  {demand.notes && (
+                    <span className="text-xs text-muted-foreground truncate">· {demand.notes}</span>
+                  )}
+                </div>
+
+                {demand.rejectionComment && (
+                  <div className="rounded-lg bg-red-50 border border-red-100 px-3 py-2 text-xs text-red-700">
+                    Rejected: {demand.rejectionComment}
+                  </div>
+                )}
+
+                {/* Manager approval actions */}
+                {canApprove && (
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      onClick={() => handleApprove(demand.id)}
+                      disabled={actionId === demand.id}
+                      className="flex flex-1 items-center justify-center gap-1.5 min-h-[44px] rounded-xl bg-emerald-600 text-white text-xs font-medium transition-colors hover:bg-emerald-700 disabled:opacity-50"
+                    >
+                      {actionId === demand.id
+                        ? <Loader2 className="h-4 w-4 animate-spin" />
+                        : <><CheckCircle2 className="h-4 w-4" /> Approve</>
+                      }
+                    </button>
+                    <button
+                      onClick={() => setRejectTarget(demand.id)}
+                      disabled={actionId === demand.id}
+                      className="flex flex-1 items-center justify-center gap-1.5 min-h-[44px] rounded-xl bg-red-50 text-red-600 border border-red-200 text-xs font-medium transition-colors hover:bg-red-100 disabled:opacity-50"
+                    >
+                      <XCircle className="h-4 w-4" /> Reject
+                    </button>
+                  </div>
+                )}
+
+                {/* Mark as received — updates inventory */}
+                {canReceive && (
+                  <button
+                    onClick={() => handleMarkReceived(demand.id)}
+                    disabled={actionId === demand.id}
+                    className="flex w-full items-center justify-center gap-2 min-h-[44px] rounded-xl bg-blue-600 text-white text-xs font-medium transition-colors hover:bg-blue-700 disabled:opacity-50 mt-1"
+                  >
+                    {actionId === demand.id
+                      ? <Loader2 className="h-4 w-4 animate-spin" />
+                      : <><PackageCheck className="h-4 w-4" /> Mark as Received — Update Inventory</>
+                    }
+                  </button>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })}
+
+        <div className="h-2" />
+      </div>
+
+      {/* FAB */}
+      <button
+        onClick={() => setShowCreate(true)}
+        className="absolute bottom-6 right-4 flex items-center gap-2 rounded-full bg-primary text-primary-foreground px-5 py-3 shadow-lg active:scale-95 transition-transform min-h-[48px]"
+        aria-label="Create demand"
+      >
+        <Plus className="h-5 w-5" />
+        <span className="text-sm font-medium">New Demand</span>
+      </button>
+
+      {/* Modals */}
+      {showCreate && (
+        <CreateDemandModal
+          onClose={() => setShowCreate(false)}
+          onCreated={handleCreated}
+        />
+      )}
+
+      {rejectTarget && (
+        <RejectModal
+          demandId={rejectTarget}
+          onClose={() => setRejectTarget(null)}
+          onRejected={handleRejected}
+        />
+      )}
+    </div>
+  );
+}

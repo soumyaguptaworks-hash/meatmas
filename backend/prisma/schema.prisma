@@ -1,0 +1,54 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum Role {
+  ADMIN
+  MANAGER
+  STAFF
+  POS_OPERATOR
+}
+
+enum AppContext {
+  ADMIN
+  FACTORY
+  POS
+}
+
+// ─── Models ───────────────────────────────────────────────────────────────────
+
+model User {
+  id                  String      @id @default(uuid())
+  email               String      @unique
+  name                String
+  password            String
+  role                Role
+  appContext           AppContext
+
+  // Account status
+  isActive            Boolean     @default(true)
+
+  // Brute-force protection
+  failedLoginAttempts Int         @default(0)
+  lockedUntil         DateTime?
+
+  // OTP 2FA
+  otpCode             String?     // bcrypt hash of the 6-digit OTP
+  otpExpiry           DateTime?
+  otpAttempts         Int         @default(0)
+
+  // Session
+  refreshToken        String?     // SHA-256 hash of the refresh JWT
+
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+
+  @@map("users")
+}
