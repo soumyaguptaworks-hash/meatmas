@@ -11,26 +11,19 @@ export function AppShell() {
   if (!accessToken) return <Navigate to="/login" replace />;
 
   return (
-    <div className="flex flex-col h-[100dvh] overflow-hidden">
-      {/* Offline banner — always at top */}
-      <OfflineBanner />
+    <div className="flex h-[100dvh] overflow-hidden">
+      {/* Sidebar — full height, desktop only */}
+      <DesktopSidebar />
 
-      {/* Header (mobile + desktop) */}
-      <AppHeader />
-
-      {/* Body row: sidebar (desktop) + main content */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Desktop sidebar */}
-        <DesktopSidebar />
-
-        {/* Scrollable main */}
+      {/* Right column: banner + header + content + bottom nav */}
+      <div className="flex flex-1 flex-col overflow-hidden">
+        <OfflineBanner />
+        <AppHeader />
         <main className="flex-1 overflow-y-auto scrollbar-none bg-[#f7f7f8]">
           <Outlet />
         </main>
+        <BottomNav />
       </div>
-
-      {/* Bottom nav — only on mobile */}
-      <BottomNav />
     </div>
   );
 }

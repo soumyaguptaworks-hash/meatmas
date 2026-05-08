@@ -55,12 +55,9 @@ export function AppHeader() {
         paddingBottom: '0.875rem',
       }}
     >
-      {/* Page title */}
-      <div>
+      {/* Page title — mobile only; desktop uses sidebar active state */}
+      <div className="md:hidden">
         <h1 className="text-base font-semibold text-gray-900 leading-none">{meta.title}</h1>
-        {meta.subtitle && (
-          <p className="text-xs text-gray-400 mt-0.5 hidden sm:block">{meta.subtitle}</p>
-        )}
       </div>
 
       {/* Right side */}
