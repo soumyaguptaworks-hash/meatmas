@@ -10,7 +10,24 @@ import {
   UseGuards,
   NotFoundException,
 } from '@nestjs/common';
+import { IsOptional, IsString, IsNumber } from 'class-validator';
+import { Type } from 'class-transformer';
 import { JwtAuthGuard, CurrentUser } from '../auth/auth.module';
+
+class CompleteDemandDto {
+  @IsOptional()
+  @IsString()
+  billData?: string;
+
+  @IsOptional()
+  @IsString()
+  billFileName?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  receivedQuantity?: number;
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -778,7 +795,7 @@ export class FactoryController {
   @Patch('demands/:id/complete')
   completeDemand(
     @Param('id') id: string,
-    @Body() body: { billData?: string; billFileName?: string; receivedQuantity?: number },
+    @Body() body: CompleteDemandDto,
     @CurrentUser() user: { email: string; role: string; sub: string },
   ) {
     const demand = demands.find((d) => d.id === id);
@@ -787,9 +804,12 @@ export class FactoryController {
       throw new NotFoundException(`Demand ${id} is not in APPROVED status`);
     }
 
-    const receivedQty = (body?.receivedQuantity != null && body.receivedQuantity > 0)
-      ? Math.min(body.receivedQuantity, demand.quantity)
+    const rawQty = body?.receivedQuantity;
+    const receivedQty = (rawQty != null && Number(rawQty) > 0)
+      ? Math.min(Number(rawQty), demand.quantity)
       : demand.quantity;
+
+    console.log(`[completeDemand] id=${id} ordered=${demand.quantity} receivedQty=${receivedQty} body.receivedQuantity=${rawQty}`);
 
     // Determine which inventory array to update
     let targetArray: InventoryItem[];
