@@ -48,16 +48,11 @@ export function AppHeader() {
   }
 
   return (
-    <header
-      className="flex items-center justify-between border-b border-gray-100 bg-white px-4 md:px-6 shrink-0"
-      style={{
-        paddingTop: 'calc(env(safe-area-inset-top) + 0.875rem)',
-        paddingBottom: '0.875rem',
-      }}
-    >
-      {/* Page title — mobile only; desktop uses sidebar active state */}
-      <div className="md:hidden">
+    <header className="flex h-16 items-center justify-between border-b border-gray-100 bg-white px-4 md:px-6 shrink-0">
+      {/* Page title */}
+      <div>
         <h1 className="text-base font-semibold text-gray-900 leading-none">{meta.title}</h1>
+        {meta.subtitle && <p className="text-xs text-gray-400 mt-0.5">{meta.subtitle}</p>}
       </div>
 
       {/* Right side */}
