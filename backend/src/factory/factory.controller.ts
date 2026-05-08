@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Patch,
+  Delete,
   Param,
   Body,
   Query,
@@ -42,6 +43,15 @@ interface Demand {
   dueDate: string;
   notes?: string;
   rejectionComment?: string;
+  approvedBy?: string;
+  approvedByRole?: string;
+  approvedById?: string;
+  approvedAt?: string;
+  receivedBy?: string;
+  receivedByRole?: string;
+  receivedAt?: string;
+  billData?: string;
+  billFileName?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -139,9 +149,13 @@ const demands: Demand[] = [
     unit: 'pcs',
     priority: 'LOW',
     status: 'APPROVED',
-    requestedBy: 'manager@factory.com',
+    requestedBy: 'manager@meatmas.com',
     requestedByRole: 'MANAGER',
     dueDate: '2026-05-08',
+    approvedBy: 'admin@meatmas.com',
+    approvedByRole: 'ADMIN',
+    approvedById: '1',
+    approvedAt: '2026-05-03T11:00:00Z',
     createdAt: '2026-05-02T10:00:00Z',
     updatedAt: '2026-05-03T11:00:00Z',
   },
@@ -191,6 +205,55 @@ const demands: Demand[] = [
     rejectionComment: 'Supplier not available this week',
     createdAt: '2026-05-02T08:00:00Z',
     updatedAt: '2026-05-02T15:00:00Z',
+  },
+  {
+    id: 'd7',
+    demandType: 'RAW_MATERIAL',
+    itemCode: 'MT003',
+    itemName: 'Pork Ribs',
+    quantity: 40,
+    unit: 'kg',
+    priority: 'MEDIUM',
+    status: 'COMPLETED',
+    requestedBy: 'staff@meatmas.com',
+    requestedByRole: 'STAFF',
+    dueDate: '2026-05-04',
+    notes: 'Needed for weekend BBQ stock',
+    approvedBy: 'admin@meatmas.com',
+    approvedByRole: 'ADMIN',
+    approvedById: '1',
+    approvedAt: '2026-05-03T11:30:00Z',
+    receivedBy: 'manager@meatmas.com',
+    receivedByRole: 'MANAGER',
+    receivedAt: '2026-05-04T09:15:00Z',
+    billData: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+    billFileName: 'pork_ribs_invoice.png',
+    createdAt: '2026-05-03T08:00:00Z',
+    updatedAt: '2026-05-04T09:15:00Z',
+  },
+  {
+    id: 'd8',
+    demandType: 'PACKAGING',
+    itemCode: 'PK002',
+    itemName: 'Shrink Wrap Rolls',
+    quantity: 20,
+    unit: 'rolls',
+    priority: 'LOW',
+    status: 'COMPLETED',
+    requestedBy: 'manager@meatmas.com',
+    requestedByRole: 'MANAGER',
+    dueDate: '2026-05-03',
+    approvedBy: 'admin@meatmas.com',
+    approvedByRole: 'ADMIN',
+    approvedById: '1',
+    approvedAt: '2026-05-02T14:00:00Z',
+    receivedBy: 'staff@meatmas.com',
+    receivedByRole: 'STAFF',
+    receivedAt: '2026-05-03T10:00:00Z',
+    billData: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+    billFileName: 'shrink_wrap_invoice.png',
+    createdAt: '2026-05-02T10:00:00Z',
+    updatedAt: '2026-05-03T10:00:00Z',
   },
 ];
 
@@ -456,6 +519,88 @@ const packagingOrders: PackagingOrder[] = [
   },
 ];
 
+// ─── Pipeline types & seed ────────────────────────────────────────────────────
+
+type PipelineOutputType = 'PROCESSED' | 'WASTAGE';
+type PipelineCategory = 'POULTRY' | 'RED_MEAT' | 'PORK' | 'SEAFOOD' | 'OTHER';
+
+interface PipelineOutput {
+  id: string;
+  name: string;
+  type: PipelineOutputType;
+  yieldPct: number;
+  unit: string;
+}
+
+interface Pipeline {
+  id: string;
+  inputMaterial: string;
+  inputUnit: string;
+  category: PipelineCategory;
+  outputs: PipelineOutput[];
+  notes?: string;
+}
+
+const pipelines: Pipeline[] = [
+  {
+    id: 'pl1', inputMaterial: 'Whole Chicken', inputUnit: 'kg', category: 'POULTRY',
+    notes: 'Standard broiler chicken breakdown',
+    outputs: [
+      { id: 'pl1o1', name: 'Chicken Breast',    type: 'PROCESSED', yieldPct: 40, unit: 'kg' },
+      { id: 'pl1o2', name: 'Chicken Wings',     type: 'PROCESSED', yieldPct: 20, unit: 'kg' },
+      { id: 'pl1o3', name: 'Chicken Drumstick', type: 'PROCESSED', yieldPct: 15, unit: 'kg' },
+      { id: 'pl1o4', name: 'Chicken Liver',     type: 'PROCESSED', yieldPct:  5, unit: 'kg' },
+      { id: 'pl1o5', name: 'Wastage / Bones',   type: 'WASTAGE',   yieldPct: 20, unit: 'kg' },
+    ],
+  },
+  {
+    id: 'pl2', inputMaterial: 'Whole Mutton', inputUnit: 'kg', category: 'RED_MEAT',
+    notes: 'Fresh mutton carcass processing',
+    outputs: [
+      { id: 'pl2o1', name: 'Mutton Chops',    type: 'PROCESSED', yieldPct: 40, unit: 'kg' },
+      { id: 'pl2o2', name: 'Mutton Mince',    type: 'PROCESSED', yieldPct: 30, unit: 'kg' },
+      { id: 'pl2o3', name: 'Mutton Liver',    type: 'PROCESSED', yieldPct:  5, unit: 'kg' },
+      { id: 'pl2o4', name: 'Wastage / Bones', type: 'WASTAGE',   yieldPct: 25, unit: 'kg' },
+    ],
+  },
+  {
+    id: 'pl3', inputMaterial: 'Whole Beef', inputUnit: 'kg', category: 'RED_MEAT',
+    notes: 'Beef carcass — forequarter & hindquarter combined',
+    outputs: [
+      { id: 'pl3o1', name: 'Beef Steak Cuts', type: 'PROCESSED', yieldPct: 45, unit: 'kg' },
+      { id: 'pl3o2', name: 'Beef Mince',      type: 'PROCESSED', yieldPct: 25, unit: 'kg' },
+      { id: 'pl3o3', name: 'Beef Ribs',       type: 'PROCESSED', yieldPct: 20, unit: 'kg' },
+      { id: 'pl3o4', name: 'Wastage / Bones', type: 'WASTAGE',   yieldPct: 10, unit: 'kg' },
+    ],
+  },
+  {
+    id: 'pl4', inputMaterial: 'Whole Pork', inputUnit: 'kg', category: 'PORK',
+    outputs: [
+      { id: 'pl4o1', name: 'Pork Chops',      type: 'PROCESSED', yieldPct: 38, unit: 'kg' },
+      { id: 'pl4o2', name: 'Pork Ribs',       type: 'PROCESSED', yieldPct: 22, unit: 'kg' },
+      { id: 'pl4o3', name: 'Pork Mince',      type: 'PROCESSED', yieldPct: 25, unit: 'kg' },
+      { id: 'pl4o4', name: 'Wastage / Bones', type: 'WASTAGE',   yieldPct: 15, unit: 'kg' },
+    ],
+  },
+  {
+    id: 'pl5', inputMaterial: 'Whole Lamb', inputUnit: 'kg', category: 'RED_MEAT',
+    outputs: [
+      { id: 'pl5o1', name: 'Lamb Chops',      type: 'PROCESSED', yieldPct: 45, unit: 'kg' },
+      { id: 'pl5o2', name: 'Lamb Mince',      type: 'PROCESSED', yieldPct: 28, unit: 'kg' },
+      { id: 'pl5o3', name: 'Lamb Liver',      type: 'PROCESSED', yieldPct:  5, unit: 'kg' },
+      { id: 'pl5o4', name: 'Wastage / Bones', type: 'WASTAGE',   yieldPct: 22, unit: 'kg' },
+    ],
+  },
+  {
+    id: 'pl6', inputMaterial: 'Whole Goat', inputUnit: 'kg', category: 'RED_MEAT',
+    outputs: [
+      { id: 'pl6o1', name: 'Goat Curry Cut',  type: 'PROCESSED', yieldPct: 55, unit: 'kg' },
+      { id: 'pl6o2', name: 'Goat Mince',      type: 'PROCESSED', yieldPct: 22, unit: 'kg' },
+      { id: 'pl6o3', name: 'Wastage / Bones', type: 'WASTAGE',   yieldPct: 23, unit: 'kg' },
+    ],
+  },
+];
+
 // ─── Controller ───────────────────────────────────────────────────────────────
 
 @UseGuards(JwtAuthGuard)
@@ -592,21 +737,26 @@ export class FactoryController {
   @Patch('demands/:id/approve')
   approveDemand(
     @Param('id') id: string,
-    @CurrentUser() user: { email: string; role: string },
+    @CurrentUser() user: { email: string; role: string; sub: string },
   ) {
     const demand = demands.find((d) => d.id === id);
     if (!demand) throw new NotFoundException(`Demand ${id} not found`);
 
     const isManager = user?.role === 'MANAGER';
     const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
+    const now = new Date().toISOString();
 
     if (isManager && demand.status === 'PENDING_MANAGER') {
       demand.status = 'PENDING_ADMIN';
     } else if (isAdmin && demand.status === 'PENDING_ADMIN') {
       demand.status = 'APPROVED';
+      demand.approvedBy = user?.email;
+      demand.approvedByRole = user?.role;
+      demand.approvedById = user?.sub;
+      demand.approvedAt = now;
     }
 
-    demand.updatedAt = new Date().toISOString();
+    demand.updatedAt = now;
     return demand;
   }
 
@@ -624,7 +774,11 @@ export class FactoryController {
   }
 
   @Patch('demands/:id/complete')
-  completeDemand(@Param('id') id: string) {
+  completeDemand(
+    @Param('id') id: string,
+    @Body() body: { billData?: string; billFileName?: string },
+    @CurrentUser() user: { email: string; role: string; sub: string },
+  ) {
     const demand = demands.find((d) => d.id === id);
     if (!demand) throw new NotFoundException(`Demand ${id} not found`);
     if (demand.status !== 'APPROVED') {
@@ -676,8 +830,16 @@ export class FactoryController {
       targetArray.push(newItem);
     }
 
+    const now = new Date().toISOString();
     demand.status = 'COMPLETED';
-    demand.updatedAt = new Date().toISOString();
+    demand.updatedAt = now;
+    demand.receivedBy = user?.email;
+    demand.receivedByRole = user?.role;
+    demand.receivedAt = now;
+    if (body?.billData) {
+      demand.billData = body.billData;
+      demand.billFileName = body.billFileName ?? 'bill';
+    }
     return demand;
   }
 
@@ -790,6 +952,63 @@ export class FactoryController {
       return packagingOrders.filter((p) => p.status === status);
     }
     return packagingOrders;
+  }
+
+  // ── Pipelines ──────────────────────────────────────────────────────────────
+
+  @Get('pipelines')
+  getPipelines() {
+    return pipelines;
+  }
+
+  @Post('pipelines')
+  createPipeline(
+    @Body() body: { inputMaterial: string; inputUnit: string; category: PipelineCategory; outputs: PipelineOutput[]; notes?: string },
+  ) {
+    const newPipeline: Pipeline = {
+      id: `pl${Date.now()}`,
+      inputMaterial: body.inputMaterial,
+      inputUnit: body.inputUnit,
+      category: body.category,
+      outputs: (body.outputs ?? []).map((o) => ({ ...o, id: o.id || `o${Date.now()}${Math.random()}` })),
+      notes: body.notes,
+    };
+    pipelines.push(newPipeline);
+    return newPipeline;
+  }
+
+  @Patch('pipelines/:id')
+  updatePipeline(
+    @Param('id') id: string,
+    @Body() body: Partial<Pipeline>,
+  ) {
+    const p = pipelines.find((pl) => pl.id === id);
+    if (!p) throw new NotFoundException(`Pipeline ${id} not found`);
+    if (body.inputMaterial !== undefined) p.inputMaterial = body.inputMaterial;
+    if (body.inputUnit !== undefined) p.inputUnit = body.inputUnit;
+    if (body.category !== undefined) p.category = body.category;
+    if (body.notes !== undefined) p.notes = body.notes;
+    if (body.outputs !== undefined) p.outputs = body.outputs;
+    return p;
+  }
+
+  @Patch('pipelines/:id/outputs')
+  updatePipelineOutputs(
+    @Param('id') id: string,
+    @Body() body: { outputs: PipelineOutput[] },
+  ) {
+    const p = pipelines.find((pl) => pl.id === id);
+    if (!p) throw new NotFoundException(`Pipeline ${id} not found`);
+    p.outputs = body.outputs;
+    return p;
+  }
+
+  @Delete('pipelines/:id')
+  deletePipeline(@Param('id') id: string) {
+    const idx = pipelines.findIndex((pl) => pl.id === id);
+    if (idx === -1) throw new NotFoundException(`Pipeline ${id} not found`);
+    pipelines.splice(idx, 1);
+    return { deleted: true };
   }
 
   @Post('packaging')

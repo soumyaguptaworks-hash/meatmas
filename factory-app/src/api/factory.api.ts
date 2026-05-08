@@ -32,6 +32,15 @@ export interface Demand {
   dueDate: string;
   notes?: string;
   rejectionComment?: string;
+  approvedBy?: string;
+  approvedByRole?: string;
+  approvedById?: string;
+  approvedAt?: string;
+  receivedBy?: string;
+  receivedByRole?: string;
+  receivedAt?: string;
+  billData?: string;
+  billFileName?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -84,6 +93,25 @@ export interface PackagingOrder {
   status: PackagingStatus;
   performedBy: string;
   createdAt: string;
+}
+
+export type PipelineOutputType = 'PROCESSED' | 'WASTAGE';
+
+export interface PipelineOutput {
+  id: string;
+  name: string;
+  type: PipelineOutputType;
+  yieldPct: number;
+  unit: string;
+}
+
+export interface Pipeline {
+  id: string;
+  inputMaterial: string;
+  inputUnit: string;
+  category: string;
+  outputs: PipelineOutput[];
+  notes?: string;
 }
 
 export interface HomeStats {
@@ -156,8 +184,8 @@ export const factoryApi = {
   rejectDemand: (id: string, comment: string) =>
     api.patch<Demand>(`/factory/demands/${id}/reject`, { comment }),
 
-  completeDemand: (id: string) =>
-    api.patch<Demand>(`/factory/demands/${id}/complete`),
+  completeDemand: (id: string, billData?: string, billFileName?: string) =>
+    api.patch<Demand>(`/factory/demands/${id}/complete`, { billData, billFileName }),
 
   // Inventory
   getInventory: (type?: InventoryType, search?: string) =>
@@ -188,4 +216,8 @@ export const factoryApi = {
 
   createPackaging: (body: CreatePackagingBody) =>
     api.post<PackagingOrder>('/factory/packaging', body),
+
+  // Pipelines
+  getPipelines: () =>
+    api.get<Pipeline[]>('/factory/pipelines'),
 };

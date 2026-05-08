@@ -12,7 +12,8 @@ const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
   '/':                   { title: 'Dashboard',        subtitle: 'Overview of your operations' },
   '/users':              { title: 'User Management',  subtitle: 'Manage admin and operator accounts' },
   '/item-master':        { title: 'Item Master',      subtitle: 'Manage your product catalog' },
-  '/demand-approvals':   { title: 'Demand Approvals', subtitle: 'Review and approve factory demands' },
+  '/demand-approvals':     { title: 'Demand Approvals',    subtitle: 'Review and approve factory demands' },
+  '/processing-pipeline':  { title: 'Processing Pipeline', subtitle: 'Define product breakdown rules for each raw material' },
 };
 
 function getInitials(email: string) {

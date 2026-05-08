@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { CheckCircle2, XCircle, ClipboardList, Clock, Loader2, RefreshCw, MessageSquare } from 'lucide-react';
+import { CheckCircle2, XCircle, ClipboardList, Clock, Loader2, RefreshCw, MessageSquare, X, User, ShieldCheck, PackageCheck, FileText, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -31,6 +31,15 @@ interface Demand {
   dueDate: string;
   notes?: string;
   rejectionComment?: string;
+  approvedBy?: string;
+  approvedByRole?: string;
+  approvedById?: string;
+  approvedAt?: string;
+  receivedBy?: string;
+  receivedByRole?: string;
+  receivedAt?: string;
+  billData?: string;
+  billFileName?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -59,6 +68,197 @@ const STATUS_TABS: { key: string; label: string }[] = [
   { key: 'COMPLETED',      label: 'Completed' },
   { key: 'REJECTED',       label: 'Rejected' },
 ];
+
+// ─── Detail Drawer ─────────────────────────────────────────────────────────
+
+function DemandDetailDrawer({ demand, onClose }: { demand: Demand; onClose: () => void }) {
+  const isImage = demand.billData?.startsWith('data:image');
+  const isPdf = demand.billData?.startsWith('data:application/pdf');
+
+  function downloadBill() {
+    if (!demand.billData) return;
+    const a = document.createElement('a');
+    a.href = demand.billData;
+    a.download = demand.billFileName ?? 'bill';
+    a.click();
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex justify-end" onClick={onClose}>
+      <div
+        className="relative h-full w-full max-w-lg bg-white shadow-2xl overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 border-b bg-white">
+          <div>
+            <h2 className="font-semibold text-gray-800 text-base">Demand Details</h2>
+            <p className="text-xs text-gray-400 font-mono uppercase mt-0.5">{demand.id}</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="px-6 py-5 space-y-6">
+          {/* Status badge */}
+          <div className="flex items-center gap-2">
+            <Badge variant={STATUS_VARIANT[demand.status]}>{demand.status.replace(/_/g, ' ')}</Badge>
+            <Badge variant={PRIORITY_VARIANT[demand.priority]}>{demand.priority}</Badge>
+          </div>
+
+          {/* Item info */}
+          <section className="space-y-3">
+            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Item</h3>
+            <div className="rounded-xl bg-gray-50 p-4 space-y-2">
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-500">Name</span>
+                <span className="text-sm font-semibold text-gray-800">{demand.itemName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-500">Code</span>
+                <span className="text-xs font-mono text-gray-600">{demand.itemCode}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-500">Type</span>
+                <span className="text-sm text-gray-700">{demand.demandType.replace(/_/g, ' ')}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-500">Quantity</span>
+                <span className="text-sm font-semibold text-gray-800">{demand.quantity} {demand.unit}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-500">Due Date</span>
+                <span className="text-sm text-gray-700">{new Date(demand.dueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+              </div>
+              {demand.notes && (
+                <div className="pt-1 border-t">
+                  <span className="text-xs text-gray-400">Notes: </span>
+                  <span className="text-xs text-gray-600">{demand.notes}</span>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* Requested by */}
+          <section className="space-y-3">
+            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide flex items-center gap-1.5">
+              <User className="h-3.5 w-3.5" /> Requested By
+            </h3>
+            <div className="rounded-xl bg-gray-50 p-4 space-y-2">
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-500">Email</span>
+                <span className="text-sm text-gray-800">{demand.requestedBy}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-500">Role</span>
+                <span className="text-sm text-gray-700">{demand.requestedByRole}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-500">Raised On</span>
+                <span className="text-sm text-gray-700">{new Date(demand.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+              </div>
+            </div>
+          </section>
+
+          {/* Approved by */}
+          {demand.approvedBy && (
+            <section className="space-y-3">
+              <h3 className="text-xs font-semibold text-emerald-600 uppercase tracking-wide flex items-center gap-1.5">
+                <ShieldCheck className="h-3.5 w-3.5" /> Approved By
+              </h3>
+              <div className="rounded-xl bg-emerald-50 border border-emerald-100 p-4 space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-500">Email</span>
+                  <span className="text-sm font-medium text-gray-800">{demand.approvedBy}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-500">Role</span>
+                  <span className="text-sm text-gray-700">{demand.approvedByRole}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-500">User ID</span>
+                  <span className="text-xs font-mono text-gray-500">{demand.approvedById}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-500">Approved At</span>
+                  <span className="text-sm text-gray-700">{new Date(demand.approvedAt!).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* Received by */}
+          {demand.receivedBy && (
+            <section className="space-y-3">
+              <h3 className="text-xs font-semibold text-blue-600 uppercase tracking-wide flex items-center gap-1.5">
+                <PackageCheck className="h-3.5 w-3.5" /> Received By
+              </h3>
+              <div className="rounded-xl bg-blue-50 border border-blue-100 p-4 space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-500">Email</span>
+                  <span className="text-sm font-medium text-gray-800">{demand.receivedBy}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-500">Role</span>
+                  <span className="text-sm text-gray-700">{demand.receivedByRole}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-500">Received At</span>
+                  <span className="text-sm text-gray-700">{new Date(demand.receivedAt!).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* Bill */}
+          {demand.billData ? (
+            <section className="space-y-3">
+              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide flex items-center gap-1.5">
+                <FileText className="h-3.5 w-3.5" /> Supplier Bill
+              </h3>
+              <div className="rounded-xl border overflow-hidden">
+                {isImage && (
+                  <img src={demand.billData} alt="supplier bill" className="w-full object-contain max-h-72" />
+                )}
+                {isPdf && (
+                  <div className="flex items-center gap-3 px-4 py-3 bg-gray-50">
+                    <FileText className="h-8 w-8 text-red-500 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{demand.billFileName ?? 'bill.pdf'}</p>
+                      <p className="text-xs text-gray-400">PDF Document</p>
+                    </div>
+                  </div>
+                )}
+                <button
+                  onClick={downloadBill}
+                  className="flex w-full items-center justify-center gap-2 py-2.5 bg-gray-50 border-t text-xs font-medium text-gray-600 hover:bg-gray-100 transition-colors"
+                >
+                  <Download className="h-3.5 w-3.5" /> Download Bill
+                </button>
+              </div>
+            </section>
+          ) : (
+            demand.status === 'COMPLETED' && (
+              <div className="rounded-xl border border-dashed border-gray-200 px-4 py-5 text-center text-sm text-gray-400">
+                No bill uploaded for this demand.
+              </div>
+            )
+          )}
+
+          {demand.rejectionComment && (
+            <section className="rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-700">
+              <span className="font-medium">Rejection reason: </span>{demand.rejectionComment}
+            </section>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ─── Reject Modal ──────────────────────────────────────────────────────────
 
@@ -112,7 +312,10 @@ export function DemandApprovals() {
   const [error, setError] = useState('');
   const [tab, setTab] = useState('ALL');
   const [actionId, setActionId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [rejectTarget, setRejectTarget] = useState<Demand | null>(null);
+  const [selectedDemand, setSelectedDemand] = useState<Demand | null>(null);
 
   async function fetchDemands() {
     setLoading(true);
@@ -131,9 +334,19 @@ export function DemandApprovals() {
 
   async function handleApprove(id: string) {
     setActionId(id);
+    setActionError(null);
     try {
-      const { data } = await api.patch<Demand>(`/factory/demands/${id}/approve`);
-      setDemands((prev) => prev.map((d) => d.id === id ? data : d));
+      const { data } = await api.patch<Demand>(`/factory/demands/${id}/approve`, {});
+      if (data.status === 'APPROVED') {
+        setDemands((prev) => prev.map((d) => d.id === id ? data : d));
+        setSuccessMsg('Demand approved successfully. Check the Approved tab.');
+        setTimeout(() => setSuccessMsg(null), 4000);
+      } else {
+        setActionError('Could not approve — make sure you are logged in as Admin (admin@meatmas.com).');
+      }
+    } catch (err: any) {
+      const msg = err?.response?.data?.message;
+      setActionError(Array.isArray(msg) ? msg.join(', ') : String(msg ?? 'Approve failed. Try refreshing.'));
     } finally {
       setActionId(null);
     }
@@ -141,9 +354,13 @@ export function DemandApprovals() {
 
   async function handleReject(id: string, comment: string) {
     setActionId(id);
+    setActionError(null);
     try {
       const { data } = await api.patch<Demand>(`/factory/demands/${id}/reject`, { comment });
       setDemands((prev) => prev.map((d) => d.id === id ? data : d));
+    } catch (err: any) {
+      const msg = err?.response?.data?.message;
+      setActionError(Array.isArray(msg) ? msg.join(', ') : String(msg ?? 'Reject failed'));
     } finally {
       setActionId(null);
     }
@@ -168,6 +385,14 @@ export function DemandApprovals() {
           demand={rejectTarget}
           onClose={() => setRejectTarget(null)}
           onConfirm={handleReject}
+        />
+      )}
+
+      {/* Detail drawer */}
+      {selectedDemand && (
+        <DemandDetailDrawer
+          demand={selectedDemand}
+          onClose={() => setSelectedDemand(null)}
         />
       )}
 
@@ -229,6 +454,20 @@ export function DemandApprovals() {
         </div>
       </Card>
 
+      {/* Success / error banners */}
+      {successMsg && (
+        <div className="flex items-center justify-between rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-700">
+          <span>✓ {successMsg}</span>
+          <button onClick={() => setSuccessMsg(null)} className="ml-3 text-emerald-400 hover:text-emerald-600">✕</button>
+        </div>
+      )}
+      {actionError && (
+        <div className="flex items-center justify-between rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+          <span>{actionError}</span>
+          <button onClick={() => setActionError(null)} className="ml-3 text-red-400 hover:text-red-600">✕</button>
+        </div>
+      )}
+
       {/* Table */}
       <Card className="overflow-hidden">
         {loading ? (
@@ -270,8 +509,14 @@ export function DemandApprovals() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {filtered.map((d) => (
-                  <tr key={d.id} className="hover:bg-gray-50/50 transition-colors group">
+                {filtered.map((d) => {
+                  const isClickable = d.status === 'COMPLETED';
+                  return (
+                  <tr
+                    key={d.id}
+                    onClick={() => isClickable && setSelectedDemand(d)}
+                    className={`hover:bg-gray-50/50 transition-colors group ${isClickable ? 'cursor-pointer' : ''}`}
+                  >
                     <td className="px-5 py-4 font-mono text-xs text-gray-400 uppercase">{d.id}</td>
                     <td className="px-5 py-4 text-xs text-gray-500">
                       {d.demandType?.replace('_', ' ')}
@@ -308,7 +553,7 @@ export function DemandApprovals() {
                     </td>
                     <td className="px-5 py-4">
                       {d.status === 'PENDING_ADMIN' && (
-                        <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
                           <Button
                             size="sm"
                             className="h-7 text-xs bg-emerald-500 hover:bg-emerald-600 text-white gap-1"
@@ -346,13 +591,14 @@ export function DemandApprovals() {
                         </span>
                       )}
                       {d.status === 'COMPLETED' && (
-                        <span className="text-xs text-blue-500 font-medium flex items-center gap-1">
-                          <CheckCircle2 className="h-3.5 w-3.5" /> Completed
+                        <span className="text-xs text-blue-500 font-medium flex items-center gap-1 underline underline-offset-2 decoration-dotted">
+                          <CheckCircle2 className="h-3.5 w-3.5" /> Completed · View
                         </span>
                       )}
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import {
   Loader2,
   Search,
@@ -9,6 +9,8 @@ import {
   XCircle,
   ChevronDown,
   PackageCheck,
+  Upload,
+  FileText,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -325,6 +327,118 @@ function RejectModal({ demandId, onClose, onRejected }: RejectModalProps) {
   );
 }
 
+// ─── Bill Upload Modal ─────────────────────────────────────────────────────
+
+interface BillUploadModalProps {
+  demand: Demand;
+  onClose: () => void;
+  onConfirm: (id: string, billData?: string, billFileName?: string) => Promise<void>;
+}
+
+function BillUploadModal({ demand, onClose, onConfirm }: BillUploadModalProps) {
+  const [billData, setBillData] = useState<string | undefined>();
+  const [billFileName, setBillFileName] = useState<string | undefined>();
+  const [previewType, setPreviewType] = useState<'image' | 'pdf' | null>(null);
+  const [saving, setSaving] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  function handleFile(file: File) {
+    const isImage = file.type.startsWith('image/');
+    const isPdf = file.type === 'application/pdf';
+    if (!isImage && !isPdf) return;
+    setPreviewType(isImage ? 'image' : 'pdf');
+    setBillFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = (e) => setBillData(e.target?.result as string);
+    reader.readAsDataURL(file);
+  }
+
+  async function handleSubmit() {
+    setSaving(true);
+    try {
+      await onConfirm(demand.id, billData, billFileName);
+      onClose();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40">
+      <div className="w-full sm:max-w-md bg-background rounded-t-2xl sm:rounded-2xl overflow-hidden shadow-xl">
+        <div className="flex items-center justify-between px-5 py-4 border-b">
+          <div>
+            <h2 className="font-semibold text-base flex items-center gap-2">
+              <PackageCheck className="h-4 w-4 text-blue-500" /> Mark as Received
+            </h2>
+            <p className="text-xs text-muted-foreground mt-0.5">{demand.itemName} · {demand.quantity} {demand.unit}</p>
+          </div>
+          <button onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-full bg-muted/60 hover:bg-muted">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="px-5 py-4 space-y-4">
+          <p className="text-sm text-muted-foreground">Attach the supplier bill or invoice (optional) before updating inventory.</p>
+
+          {!billData ? (
+            <button
+              onClick={() => fileRef.current?.click()}
+              className="flex flex-col items-center justify-center w-full gap-2 rounded-xl border-2 border-dashed border-muted-foreground/30 py-8 text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors"
+            >
+              <Upload className="h-6 w-6" />
+              <span className="text-sm font-medium">Tap to upload bill</span>
+              <span className="text-xs">PNG, JPG or PDF</span>
+            </button>
+          ) : (
+            <div className="relative rounded-xl overflow-hidden border bg-muted/30">
+              {previewType === 'image' ? (
+                <img src={billData} alt="bill" className="w-full max-h-48 object-contain" />
+              ) : (
+                <div className="flex items-center gap-3 px-4 py-3">
+                  <FileText className="h-8 w-8 text-red-500 shrink-0" />
+                  <span className="text-sm font-medium truncate">{billFileName}</span>
+                </div>
+              )}
+              <button
+                onClick={() => { setBillData(undefined); setBillFileName(undefined); setPreviewType(null); }}
+                className="absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          )}
+
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/png,image/jpeg,image/jpg,application/pdf"
+            className="hidden"
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
+          />
+        </div>
+
+        <div className="flex gap-3 px-5 py-4 border-t">
+          <button
+            onClick={onClose}
+            disabled={saving}
+            className="flex-1 rounded-xl border py-2.5 text-sm font-medium hover:bg-muted transition-colors disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={saving}
+            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 text-white py-2.5 text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
+          >
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <><PackageCheck className="h-4 w-4" /> Confirm Receipt</>}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Page ─────────────────────────────────────────────────────────────
 
 export function Demands() {
@@ -338,6 +452,7 @@ export function Demands() {
   const [search, setSearch] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [rejectTarget, setRejectTarget] = useState<string | null>(null);
+  const [receiveTarget, setReceiveTarget] = useState<Demand | null>(null);
   const [actionId, setActionId] = useState<string | null>(null);
 
   function loadDemands(tab: DemandStatus | 'ALL') {
@@ -372,10 +487,10 @@ export function Demands() {
     }
   }
 
-  async function handleMarkReceived(id: string) {
+  async function handleMarkReceived(id: string, billData?: string, billFileName?: string) {
     setActionId(id);
     try {
-      const { data } = await factoryApi.completeDemand(id);
+      const { data } = await factoryApi.completeDemand(id, billData, billFileName);
       setDemands((prev) => prev.map((d) => d.id === id ? data : d));
     } finally {
       setActionId(null);
@@ -487,7 +602,7 @@ export function Demands() {
                   </div>
                 )}
 
-                {/* Manager approval actions */}
+                {/* Manager approval — direct, no bill */}
                 {canApprove && (
                   <div className="flex gap-2 pt-1">
                     <button
@@ -510,10 +625,10 @@ export function Demands() {
                   </div>
                 )}
 
-                {/* Mark as received — updates inventory */}
+                {/* Mark as received — asks for bill then updates inventory */}
                 {canReceive && (
                   <button
-                    onClick={() => handleMarkReceived(demand.id)}
+                    onClick={() => setReceiveTarget(demand)}
                     disabled={actionId === demand.id}
                     className="flex w-full items-center justify-center gap-2 min-h-[44px] rounded-xl bg-blue-600 text-white text-xs font-medium transition-colors hover:bg-blue-700 disabled:opacity-50 mt-1"
                   >
@@ -554,6 +669,14 @@ export function Demands() {
           demandId={rejectTarget}
           onClose={() => setRejectTarget(null)}
           onRejected={handleRejected}
+        />
+      )}
+
+      {receiveTarget && (
+        <BillUploadModal
+          demand={receiveTarget}
+          onClose={() => setReceiveTarget(null)}
+          onConfirm={handleMarkReceived}
         />
       )}
     </div>

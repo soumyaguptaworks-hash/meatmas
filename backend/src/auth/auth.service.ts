@@ -77,12 +77,6 @@ export class AuthService {
       throw new UnauthorizedException(`Invalid credentials. ${remaining} attempt(s) remaining.`);
     }
 
-    if (user.appContext !== dto.appContext) {
-      throw new ForbiddenException(
-        `Your account is not authorized for the ${dto.appContext} application.`,
-      );
-    }
-
     user.failedLoginAttempts = 0;
     user.lockedUntil = null;
 

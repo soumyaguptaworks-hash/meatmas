@@ -1,4 +1,4 @@
-import { IsEmail, IsEnum, IsString, MinLength } from 'class-validator';
+import { IsEmail, IsOptional, IsEnum, IsString, MinLength } from 'class-validator';
 
 export type AppContext = 'ADMIN' | 'FACTORY' | 'POS';
 
@@ -10,6 +10,7 @@ export class LoginDto {
   @MinLength(6)
   password: string;
 
+  @IsOptional()
   @IsEnum(['ADMIN', 'FACTORY', 'POS'])
-  appContext: AppContext;
+  appContext?: AppContext;
 }

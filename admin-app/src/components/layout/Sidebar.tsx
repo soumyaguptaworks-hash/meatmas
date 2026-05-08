@@ -1,12 +1,13 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Users, Package, ClipboardList, ChefHat } from 'lucide-react';
+import { LayoutDashboard, Users, Package, ClipboardList, ChefHat, GitBranch } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const NAV_ITEMS = [
-  { to: '/',                  label: 'Dashboard',        icon: LayoutDashboard },
-  { to: '/users',             label: 'User Management',  icon: Users },
-  { to: '/item-master',       label: 'Item Master',      icon: Package },
-  { to: '/demand-approvals',  label: 'Demand Approvals', icon: ClipboardList },
+  { to: '/',                     label: 'Dashboard',           icon: LayoutDashboard },
+  { to: '/users',                label: 'User Management',     icon: Users },
+  { to: '/item-master',          label: 'Item Master',         icon: Package },
+  { to: '/demand-approvals',     label: 'Demand Approvals',    icon: ClipboardList },
+  { to: '/processing-pipeline',  label: 'Processing Pipeline', icon: GitBranch },
 ] as const;
 
 export function Sidebar() {
