@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle2, XCircle, ClipboardList, Clock, Loader2, RefreshCw, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -130,21 +130,35 @@ export function DemandApprovals() {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [rejectTarget, setRejectTarget] = useState<Demand | null>(null);
   const [typeFilter, setTypeFilter] = useState<'ALL' | 'RAW_MATERIAL' | 'STATIONARY' | 'PACKAGING'>('ALL');
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  async function fetchDemands() {
-    setLoading(true);
+  const fetchDemands = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     setError('');
     try {
       const { data } = await api.get<Demand[]>('/factory/demands');
       setDemands(data);
+      setLastUpdated(new Date());
     } catch {
-      setError('Failed to load demands. Please try again.');
+      if (!silent) setError('Failed to load demands. Please try again.');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
-  }
+  }, []);
 
-  useEffect(() => { fetchDemands(); }, []);
+  useEffect(() => {
+    fetchDemands();
+    // poll every 20 seconds so new remainder demands appear automatically
+    intervalRef.current = setInterval(() => fetchDemands(true), 20_000);
+    // also refresh when the browser tab regains focus
+    const onVisible = () => { if (document.visibilityState === 'visible') fetchDemands(true); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [fetchDemands]);
 
   async function handleApprove(id: string) {
     setActionId(id);
@@ -252,15 +266,22 @@ export function DemandApprovals() {
               );
             })}
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={fetchDemands}
-            disabled={loading}
-            className="gap-1.5 text-xs shrink-0"
-          >
-            <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} /> Refresh
-          </Button>
+          <div className="flex items-center gap-2 shrink-0">
+            {lastUpdated && (
+              <span className="text-[10px] text-gray-400">
+                Updated {lastUpdated.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+              </span>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fetchDemands()}
+              disabled={loading}
+              className="gap-1.5 text-xs"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} /> Refresh
+            </Button>
+          </div>
         </div>
 
         {/* Sub-filters — only visible on Needs Approval tab */}
