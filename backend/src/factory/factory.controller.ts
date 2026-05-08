@@ -792,10 +792,10 @@ export class FactoryController {
     return demand;
   }
 
-  @Patch('demands/:id/complete')
+  @Patch('demands/:id/complete/:receivedQty')
   completeDemand(
     @Param('id') id: string,
-    @Query('receivedQty') receivedQtyParam: string | undefined,
+    @Param('receivedQty') receivedQtyParam: string,
     @Body() body: CompleteDemandDto,
     @CurrentUser() user: { email: string; role: string; sub: string },
   ) {
@@ -805,13 +805,8 @@ export class FactoryController {
       throw new NotFoundException(`Demand ${id} is not in APPROVED status`);
     }
 
-    // receivedQty comes as a query param to avoid ValidationPipe body stripping
-    const parsedParam = receivedQtyParam != null ? Number(receivedQtyParam) : NaN;
-    const receivedQty = (!isNaN(parsedParam) && parsedParam > 0)
-      ? Math.min(parsedParam, demand.quantity)
-      : demand.quantity;
-
-    console.log(`[completeDemand] id=${id} ordered=${demand.quantity} receivedQty=${receivedQty} param=${receivedQtyParam}`);
+    const receivedQty = Math.min(Math.max(Number(receivedQtyParam) || demand.quantity, 0.001), demand.quantity);
+    console.log(`[completeDemand] id=${id} ordered=${demand.quantity} receivedQty=${receivedQty}`);
 
     // Determine which inventory array to update
     let targetArray: InventoryItem[];

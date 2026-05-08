@@ -524,14 +524,10 @@ export function Demands() {
   async function handleMarkReceived(id: string, billData?: string, billFileName?: string, receivedQuantity?: number) {
     setActionId(id);
     try {
-      const { data } = await factoryApi.completeDemand(id, billData, billFileName, receivedQuantity);
-      setDemands((prev) => {
-        const updated: Demand[] = prev
-          .map((d) => (d.id === id ? data.completed : d))
-          .filter((d): d is Demand => d != null);
-        if (data.remainder) updated.push(data.remainder);
-        return updated;
-      });
+      await factoryApi.completeDemand(id, billData, billFileName, receivedQuantity);
+      // reload from server so both the completed demand and any remainder appear correctly
+      loadDemands('ALL');
+      setActiveTab('ALL');
     } finally {
       setActionId(null);
     }
