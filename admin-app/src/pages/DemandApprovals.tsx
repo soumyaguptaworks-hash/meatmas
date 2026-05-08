@@ -370,8 +370,20 @@ export function DemandApprovals() {
                       </div>
                     </td>
                     <td className="px-5 py-4 font-semibold text-gray-700">
-                      {d.quantity}{' '}
-                      <span className="text-gray-400 font-normal">{d.unit}</span>
+                      {d.status === 'COMPLETED' && d.receivedQuantity != null && d.receivedQuantity < d.quantity ? (
+                        <span className="flex flex-col gap-0.5">
+                          <span>
+                            <span className="text-amber-600">{d.receivedQuantity}</span>
+                            <span className="text-gray-400 font-normal text-xs"> / {d.quantity} {d.unit}</span>
+                          </span>
+                          <span className="text-[10px] text-amber-500 font-medium">partial receipt</span>
+                        </span>
+                      ) : (
+                        <>
+                          {d.quantity}{' '}
+                          <span className="text-gray-400 font-normal">{d.unit}</span>
+                        </>
+                      )}
                     </td>
                     <td className="px-5 py-4 text-gray-500">
                       <div>

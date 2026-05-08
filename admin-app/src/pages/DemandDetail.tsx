@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, User, ShieldCheck, PackageCheck, FileText,
-  Download, Loader2, XCircle,
+  Download, Loader2, XCircle, AlertCircle,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -158,12 +158,70 @@ export function DemandDetail() {
               )}
             </div>
           </div>
-          <div className="text-right shrink-0">
-            <p className="text-3xl font-bold text-gray-900 leading-none">{demand.quantity}</p>
-            <p className="text-sm text-gray-400 mt-1">{demand.unit}</p>
-          </div>
+
+          {/* Quantity display — split view for partial, normal for full */}
+          {demand.status === 'COMPLETED' && demand.receivedQuantity != null && demand.receivedQuantity < demand.quantity ? (
+            <div className="text-right shrink-0">
+              <div className="flex items-end gap-3 justify-end">
+                <div className="text-right">
+                  <p className="text-[10px] font-semibold text-amber-500 uppercase tracking-wide mb-0.5">Received</p>
+                  <p className="text-3xl font-bold text-amber-600 leading-none">{demand.receivedQuantity}</p>
+                </div>
+                <p className="text-gray-300 text-2xl font-light pb-0.5">/</p>
+                <div className="text-right">
+                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-0.5">Ordered</p>
+                  <p className="text-3xl font-bold text-gray-300 leading-none">{demand.quantity}</p>
+                </div>
+              </div>
+              <p className="text-sm text-gray-400 mt-1.5">{demand.unit}</p>
+            </div>
+          ) : (
+            <div className="text-right shrink-0">
+              <p className="text-3xl font-bold text-gray-900 leading-none">{demand.quantity}</p>
+              <p className="text-sm text-gray-400 mt-1">{demand.unit}</p>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Partial fulfillment summary bar */}
+      {demand.status === 'COMPLETED' && demand.receivedQuantity != null && demand.receivedQuantity < demand.quantity && (
+        <div className="rounded-2xl bg-amber-50 border border-amber-200 px-6 py-4">
+          <div className="flex items-center gap-2 mb-3">
+            <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />
+            <p className="text-sm font-semibold text-amber-700">Partial Fulfillment</p>
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="text-center">
+              <p className="text-xs text-amber-600 font-medium mb-1">Ordered</p>
+              <p className="text-2xl font-bold text-gray-800">{demand.quantity}</p>
+              <p className="text-xs text-gray-500">{demand.unit}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-xs text-emerald-600 font-medium mb-1">Received</p>
+              <p className="text-2xl font-bold text-emerald-600">{demand.receivedQuantity}</p>
+              <p className="text-xs text-gray-500">{demand.unit}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-xs text-red-500 font-medium mb-1">Pending</p>
+              <p className="text-2xl font-bold text-red-500">{demand.quantity - demand.receivedQuantity}</p>
+              <p className="text-xs text-gray-500">{demand.unit} — new demand raised</p>
+            </div>
+          </div>
+          {/* Progress bar */}
+          <div className="mt-3">
+            <div className="w-full bg-amber-100 rounded-full h-2">
+              <div
+                className="bg-emerald-500 h-2 rounded-full transition-all"
+                style={{ width: `${(demand.receivedQuantity / demand.quantity) * 100}%` }}
+              />
+            </div>
+            <p className="text-[10px] text-amber-600 mt-1 text-right font-medium">
+              {Math.round((demand.receivedQuantity / demand.quantity) * 100)}% fulfilled
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Detail grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -173,7 +231,26 @@ export function DemandDetail() {
           <InfoRow label="Item Name"  value={demand.itemName} />
           <InfoRow label="Item Code"  value={<span className="font-mono text-xs">{demand.itemCode}</span>} />
           <InfoRow label="Type"       value={demand.demandType.replace(/_/g, ' ')} />
-          <InfoRow label="Quantity"   value={`${demand.quantity} ${demand.unit}`} />
+          <InfoRow
+            label="Quantity"
+            value={
+              demand.status === 'COMPLETED' && demand.receivedQuantity != null
+                ? (
+                  <span>
+                    <span className={demand.receivedQuantity < demand.quantity ? 'text-amber-600 font-semibold' : undefined}>
+                      {demand.receivedQuantity} received
+                    </span>
+                    {demand.receivedQuantity < demand.quantity && (
+                      <span className="text-gray-400"> / {demand.quantity} {demand.unit} ordered</span>
+                    )}
+                    {demand.receivedQuantity >= demand.quantity && (
+                      <span className="text-gray-600"> / {demand.quantity} {demand.unit}</span>
+                    )}
+                  </span>
+                )
+                : `${demand.quantity} ${demand.unit}`
+            }
+          />
           <InfoRow
             label="Due Date"
             value={new Date(demand.dueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
