@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Loader2, XCircle, GitBranch, PackageCheck, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -36,18 +36,20 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
 export function BatchDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [batch, setBatch] = useState<Batch | null>(null);
-  const [loading, setLoading] = useState(true);
+  const location = useLocation();
+  const stateData = (location.state as { batch?: Batch } | null)?.batch ?? null;
+  const [batch, setBatch] = useState<Batch | null>(stateData);
+  const [loading, setLoading] = useState(!stateData);
   const [error, setError] = useState('');
   const [updating, setUpdating] = useState(false);
 
   useEffect(() => {
-    if (!id) return;
+    if (stateData || !id) return;
     factoryApi.getBatch(id)
       .then(({ data }) => setBatch(data))
       .catch(() => setError('Could not load batch details.'))
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, stateData]);
 
   async function handleStatusChange(newStatus: BatchStatus) {
     if (!batch) return;

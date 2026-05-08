@@ -120,7 +120,7 @@ export function Inventory() {
             : 0;
 
           return (
-            <Card key={item.id} className="cursor-pointer active:scale-[0.98] transition-transform" onClick={() => navigate(`/inventory/${item.id}`)}>
+            <Card key={item.id} className="cursor-pointer active:scale-[0.98] transition-transform" onClick={() => navigate(`/inventory/${item.id}`, { state: { item } })}>
               <CardContent className="p-4 space-y-3">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">

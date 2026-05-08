@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Loader2, XCircle, Package, BoxSelect } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -42,17 +42,19 @@ function Section({ title, icon: Icon, children, colorClass = 'text-gray-400', bg
 export function PackagingDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [order, setOrder] = useState<PackagingOrder | null>(null);
-  const [loading, setLoading] = useState(true);
+  const location = useLocation();
+  const stateData = (location.state as { order?: PackagingOrder } | null)?.order ?? null;
+  const [order, setOrder] = useState<PackagingOrder | null>(stateData);
+  const [loading, setLoading] = useState(!stateData);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!id) return;
+    if (stateData || !id) return;
     factoryApi.getPackagingOrder(id)
       .then(({ data }) => setOrder(data))
       .catch(() => setError('Could not load packaging order.'))
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, stateData]);
 
   if (loading) {
     return (

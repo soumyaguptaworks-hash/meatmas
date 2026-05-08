@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   ArrowLeft, User, ShieldCheck, PackageCheck, FileText,
   Download, Loader2, XCircle, AlertCircle,
@@ -47,17 +47,19 @@ function Section({ title, icon: Icon, children, colorClass = 'text-gray-400', bg
 export function DemandDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [demand, setDemand] = useState<Demand | null>(null);
-  const [loading, setLoading] = useState(true);
+  const location = useLocation();
+  const stateData = (location.state as { demand?: Demand } | null)?.demand ?? null;
+  const [demand, setDemand] = useState<Demand | null>(stateData);
+  const [loading, setLoading] = useState(!stateData);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!id) return;
+    if (stateData || !id) return;
     factoryApi.getDemand(id)
       .then(({ data }) => setDemand(data))
       .catch(() => setError('Could not load demand details.'))
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, stateData]);
 
   function downloadBill() {
     if (!demand?.billData) return;

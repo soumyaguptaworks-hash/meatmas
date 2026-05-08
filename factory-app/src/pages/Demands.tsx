@@ -664,7 +664,7 @@ export function Demands() {
             <Card
               key={demand.id}
               className="active:scale-[0.98] transition-transform cursor-pointer"
-              onClick={() => navigate(`/demands/${demand.id}`)}
+              onClick={() => navigate(`/demands/${demand.id}`, { state: { demand } })}
             >
               <CardContent className="p-4 space-y-3">
                 <div className="flex items-start justify-between gap-2">

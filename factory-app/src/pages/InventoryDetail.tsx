@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Loader2, XCircle, Layers, BarChart3 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -30,17 +30,19 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
 export function InventoryDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [item, setItem] = useState<InventoryItem | null>(null);
-  const [loading, setLoading] = useState(true);
+  const location = useLocation();
+  const stateData = (location.state as { item?: InventoryItem } | null)?.item ?? null;
+  const [item, setItem] = useState<InventoryItem | null>(stateData);
+  const [loading, setLoading] = useState(!stateData);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!id) return;
+    if (stateData || !id) return;
     factoryApi.getInventoryItem(id)
       .then(({ data }) => setItem(data))
       .catch(() => setError('Could not load inventory item.'))
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, stateData]);
 
   if (loading) {
     return (

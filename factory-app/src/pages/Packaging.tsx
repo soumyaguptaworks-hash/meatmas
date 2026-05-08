@@ -286,7 +286,7 @@ export function Packaging() {
           const cfg = STATUS_CONFIG[order.status] ?? { label: order.status, variant: 'secondary' as const, dot: 'bg-slate-400' };
 
           return (
-            <Card key={order.id} className="cursor-pointer active:scale-[0.98] transition-transform" onClick={() => navigate(`/packaging/${order.id}`)}>
+            <Card key={order.id} className="cursor-pointer active:scale-[0.98] transition-transform" onClick={() => navigate(`/packaging/${order.id}`, { state: { order } })}>
               <CardContent className="p-4 space-y-3">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
