@@ -343,7 +343,7 @@ export function DemandApprovals() {
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <XCircle className="h-10 w-10 text-red-300 mb-3" />
             <p className="text-sm font-medium text-gray-600">{error}</p>
-            <Button variant="outline" size="sm" className="mt-3 text-xs" onClick={fetchDemands}>
+            <Button variant="outline" size="sm" className="mt-3 text-xs" onClick={() => fetchDemands()}>
               Try again
             </Button>
           </div>

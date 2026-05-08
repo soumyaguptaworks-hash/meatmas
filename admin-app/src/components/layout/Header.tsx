@@ -24,7 +24,7 @@ export function Header() {
 
   // Match /demand-approvals/:id as the parent page
   const key = Object.keys(PAGE_META).find((k) => pathname === k || (k !== '/' && pathname.startsWith(k)));
-  const page = (key && PAGE_META[key]) ?? { title: 'Admin Panel', subtitle: '' };
+  const page = (key ? PAGE_META[key] : null) ?? { title: 'Admin Panel', subtitle: '' };
 
   return (
     <header className="flex h-16 items-center justify-between border-b border-gray-100 bg-white px-6 shrink-0">
