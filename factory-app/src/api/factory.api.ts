@@ -187,7 +187,11 @@ export const factoryApi = {
     api.patch<Demand>(`/factory/demands/${id}/reject`, { comment }),
 
   completeDemand: (id: string, billData?: string, billFileName?: string, receivedQuantity?: number) =>
-    api.patch<{ completed: Demand; remainder?: Demand }>(`/factory/demands/${id}/complete`, { billData, billFileName, receivedQuantity }),
+    api.patch<{ completed: Demand; remainder?: Demand }>(
+      `/factory/demands/${id}/complete`,
+      { billData, billFileName },
+      { params: receivedQuantity != null ? { receivedQty: receivedQuantity } : {} },
+    ),
 
   // Inventory
   getInventory: (type?: InventoryType, search?: string) =>

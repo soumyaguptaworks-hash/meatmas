@@ -643,14 +643,26 @@ export function Demands() {
                 </div>
 
                 <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                  <span className="font-medium text-foreground">
-                    {demand.quantity} {demand.unit}
-                  </span>
+                  {demand.status === 'COMPLETED' && demand.receivedQuantity != null && demand.receivedQuantity < demand.quantity ? (
+                    <span className="font-medium">
+                      <span className="text-amber-600">{demand.receivedQuantity}</span>
+                      <span className="text-muted-foreground"> / {demand.quantity} {demand.unit}</span>
+                    </span>
+                  ) : (
+                    <span className="font-medium text-foreground">
+                      {demand.quantity} {demand.unit}
+                    </span>
+                  )}
                   <span>
                     Due {new Date(demand.dueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
                   </span>
                   <span>by {demand.requestedBy?.split('@')[0]}</span>
                 </div>
+                {demand.originalDemandId && (
+                  <div className="rounded-lg bg-amber-50 border border-amber-100 px-3 py-2 text-xs text-amber-700">
+                    Remainder from demand {demand.originalDemandId}
+                  </div>
+                )}
 
                 <div className="flex items-center gap-2">
                   <div className={`h-2 w-2 rounded-full ${PRIORITY_COLOR[demand.priority]}`} />
