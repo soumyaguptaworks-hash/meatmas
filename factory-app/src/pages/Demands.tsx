@@ -341,11 +341,13 @@ function BillUploadModal({ demand, onClose, onConfirm }: BillUploadModalProps) {
   const [previewType, setPreviewType] = useState<'image' | 'pdf' | null>(null);
   const [receivedQty, setReceivedQty] = useState<string>(String(demand.quantity));
   const [saving, setSaving] = useState(false);
+  const [submitError, setSubmitError] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const parsedQty = parseFloat(receivedQty) || 0;
-  const remainderQty = demand.quantity - parsedQty;
-  const isPartial = parsedQty > 0 && parsedQty < demand.quantity;
+  const parsedQty = parseFloat(receivedQty);
+  const isValidQty = !isNaN(parsedQty) && parsedQty > 0 && parsedQty <= demand.quantity;
+  const remainderQty = isValidQty ? +(demand.quantity - parsedQty).toFixed(3) : 0;
+  const isPartial = isValidQty && parsedQty < demand.quantity;
 
   function handleFile(file: File) {
     const isImage = file.type.startsWith('image/');
@@ -359,11 +361,15 @@ function BillUploadModal({ demand, onClose, onConfirm }: BillUploadModalProps) {
   }
 
   async function handleSubmit() {
-    if (parsedQty <= 0 || parsedQty > demand.quantity) return;
+    if (!isValidQty) return;
     setSaving(true);
+    setSubmitError('');
     try {
       await onConfirm(demand.id, billData, billFileName, parsedQty);
       onClose();
+    } catch (err: any) {
+      const msg = err?.response?.data?.message;
+      setSubmitError(Array.isArray(msg) ? msg.join(', ') : (msg ?? 'Failed to update. Please restart the backend and try again.'));
     } finally {
       setSaving(false);
     }
@@ -447,6 +453,12 @@ function BillUploadModal({ demand, onClose, onConfirm }: BillUploadModalProps) {
           />
         </div>
 
+        {submitError && (
+          <div className="flex items-center gap-2 mx-5 mb-2 rounded-xl bg-red-50 border border-red-200 px-3 py-2.5 text-xs text-red-700">
+            <AlertCircle className="h-4 w-4 shrink-0" /> {submitError}
+          </div>
+        )}
+
         <div className="flex gap-3 px-5 py-4 border-t">
           <button
             onClick={onClose}
@@ -457,7 +469,7 @@ function BillUploadModal({ demand, onClose, onConfirm }: BillUploadModalProps) {
           </button>
           <button
             onClick={handleSubmit}
-            disabled={saving || parsedQty <= 0 || parsedQty > demand.quantity}
+            disabled={saving || !isValidQty}
             className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 text-white py-2.5 text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
           >
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <><PackageCheck className="h-4 w-4" /> Confirm Receipt</>}
