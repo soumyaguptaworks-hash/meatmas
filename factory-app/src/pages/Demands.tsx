@@ -502,12 +502,13 @@ export function Demands() {
     ? demands
     : demands.filter((d) => d.requestedBy === user?.email);
 
-  const filtered = visibleDemands.filter((d) => {
+  const filtered = visibleDemands.filter((d): d is Demand => {
+    if (!d) return false;
     const matchesSearch =
-      d.itemName.toLowerCase().includes(search.toLowerCase()) ||
-      d.itemCode.toLowerCase().includes(search.toLowerCase());
+      d.itemName?.toLowerCase().includes(search.toLowerCase()) ||
+      d.itemCode?.toLowerCase().includes(search.toLowerCase());
     const matchesType = activeTab !== 'ALL' || typeFilter === 'ALL' || d.demandType === typeFilter;
-    return matchesSearch && matchesType;
+    return !!(matchesSearch && matchesType);
   });
 
   async function handleApprove(id: string) {
@@ -525,7 +526,9 @@ export function Demands() {
     try {
       const { data } = await factoryApi.completeDemand(id, billData, billFileName, receivedQuantity);
       setDemands((prev) => {
-        const updated = prev.map((d) => d.id === id ? data.completed : d);
+        const updated: Demand[] = prev
+          .map((d) => (d.id === id ? data.completed : d))
+          .filter((d): d is Demand => d != null);
         if (data.remainder) updated.push(data.remainder);
         return updated;
       });
