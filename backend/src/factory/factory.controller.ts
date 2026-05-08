@@ -7,9 +7,11 @@ import {
   Param,
   Body,
   Query,
+  Req,
   UseGuards,
   NotFoundException,
 } from '@nestjs/common';
+import { Request } from 'express';
 import { IsOptional, IsString, IsNumber } from 'class-validator';
 import { Type } from 'class-transformer';
 import { JwtAuthGuard, CurrentUser } from '../auth/auth.module';
@@ -792,11 +794,10 @@ export class FactoryController {
     return demand;
   }
 
-  @Patch('demands/:id/complete/:receivedQty')
+  @Patch('demands/:id/complete')
   completeDemand(
     @Param('id') id: string,
-    @Param('receivedQty') receivedQtyParam: string,
-    @Body() body: CompleteDemandDto,
+    @Req() req: Request,
     @CurrentUser() user: { email: string; role: string; sub: string },
   ) {
     const demand = demands.find((d) => d.id === id);
@@ -805,8 +806,14 @@ export class FactoryController {
       throw new NotFoundException(`Demand ${id} is not in APPROVED status`);
     }
 
-    const receivedQty = Math.min(Math.max(Number(receivedQtyParam) || demand.quantity, 0.001), demand.quantity);
-    console.log(`[completeDemand] id=${id} ordered=${demand.quantity} receivedQty=${receivedQty}`);
+    // Read directly from raw body — bypasses ValidationPipe whitelist completely
+    const rawBody = req.body as any;
+    const rawQty = rawBody?.receivedQuantity;
+    const receivedQty = (rawQty != null && Number(rawQty) > 0)
+      ? Math.min(Number(rawQty), demand.quantity)
+      : demand.quantity;
+
+    console.log(`[completeDemand] id=${id} ordered=${demand.quantity} receivedQty=${receivedQty} rawBody.receivedQuantity=${rawQty}`);
 
     // Determine which inventory array to update
     let targetArray: InventoryItem[];
