@@ -193,6 +193,9 @@ export const factoryApi = {
     ),
 
   // Inventory
+  getInventoryItem: (id: string) =>
+    api.get<InventoryItem>(`/factory/inventory/${id}`),
+
   getInventory: (type?: InventoryType, search?: string) =>
     api.get<InventoryItem[]>('/factory/inventory', {
       params: {
@@ -202,6 +205,9 @@ export const factoryApi = {
     }),
 
   // Batches
+  getBatch: (id: string) =>
+    api.get<Batch>(`/factory/batches/${id}`),
+
   getBatches: (status?: BatchStatus | 'ALL') =>
     api.get<Batch[]>('/factory/batches', {
       params: status && status !== 'ALL' ? { status } : {},
@@ -214,6 +220,9 @@ export const factoryApi = {
     api.patch<Batch>(`/factory/batches/${id}/status`, { status }),
 
   // Packaging
+  getPackagingOrder: (id: string) =>
+    api.get<PackagingOrder>(`/factory/packaging/${id}`),
+
   getPackaging: (status?: PackagingStatus | 'ALL') =>
     api.get<PackagingOrder[]>('/factory/packaging', {
       params: status && status !== 'ALL' ? { status } : {},

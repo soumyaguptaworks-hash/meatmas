@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Loader2, AlertCircle, Plus, X, Trash2, ChevronDown, GitBranch } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -395,6 +396,7 @@ function CreateBatchModal({ onClose, onCreated }: CreateBatchModalProps) {
 // ─── Main Page ─────────────────────────────────────────────────────────────────
 
 export function Batches() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<BatchStatus | 'ALL'>('ALL');
   const [batches, setBatches] = useState<Batch[]>([]);
   const [loading, setLoading] = useState(true);
@@ -454,7 +456,7 @@ export function Batches() {
         {batches.map((batch) => {
           const cfg = STATUS_CONFIG[batch.status] ?? { label: batch.status, variant: 'secondary' as const, dot: 'bg-slate-400' };
           return (
-            <Card key={batch.id}>
+            <Card key={batch.id} className="cursor-pointer active:scale-[0.98] transition-transform" onClick={() => navigate(`/batches/${batch.id}`)}>
               <CardContent className="p-4 space-y-3">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">

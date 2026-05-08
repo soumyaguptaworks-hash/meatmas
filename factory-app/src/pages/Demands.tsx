@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Loader2,
   Search,
@@ -485,6 +486,7 @@ function BillUploadModal({ demand, onClose, onConfirm }: BillUploadModalProps) {
 export function Demands() {
   const user = useAuthStore((s) => s.user);
   const isManager = user?.role === 'MANAGER';
+  const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState<DemandStatus | 'ALL'>('ALL');
   const [typeFilter, setTypeFilter] = useState<'ALL' | DemandType>('ALL');
@@ -659,7 +661,11 @@ export function Demands() {
           const canReceive = isManager && demand.status === 'APPROVED';
 
           return (
-            <Card key={demand.id} className="active:scale-[0.98] transition-transform">
+            <Card
+              key={demand.id}
+              className="active:scale-[0.98] transition-transform cursor-pointer"
+              onClick={() => navigate(`/demands/${demand.id}`)}
+            >
               <CardContent className="p-4 space-y-3">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
@@ -711,7 +717,7 @@ export function Demands() {
                 {canApprove && (
                   <div className="flex gap-2 pt-1">
                     <button
-                      onClick={() => handleApprove(demand.id)}
+                      onClick={(e) => { e.stopPropagation(); handleApprove(demand.id); }}
                       disabled={actionId === demand.id}
                       className="flex flex-1 items-center justify-center gap-1.5 min-h-[44px] rounded-xl bg-emerald-600 text-white text-xs font-medium transition-colors hover:bg-emerald-700 disabled:opacity-50"
                     >
@@ -721,7 +727,7 @@ export function Demands() {
                       }
                     </button>
                     <button
-                      onClick={() => setRejectTarget(demand.id)}
+                      onClick={(e) => { e.stopPropagation(); setRejectTarget(demand.id); }}
                       disabled={actionId === demand.id}
                       className="flex flex-1 items-center justify-center gap-1.5 min-h-[44px] rounded-xl bg-red-50 text-red-600 border border-red-200 text-xs font-medium transition-colors hover:bg-red-100 disabled:opacity-50"
                     >
@@ -733,7 +739,7 @@ export function Demands() {
                 {/* Mark as received — asks for bill then updates inventory */}
                 {canReceive && (
                   <button
-                    onClick={() => setReceiveTarget(demand)}
+                    onClick={(e) => { e.stopPropagation(); setReceiveTarget(demand); }}
                     disabled={actionId === demand.id}
                     className="flex w-full items-center justify-center gap-2 min-h-[44px] rounded-xl bg-blue-600 text-white text-xs font-medium transition-colors hover:bg-blue-700 disabled:opacity-50 mt-1"
                   >

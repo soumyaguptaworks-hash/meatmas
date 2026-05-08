@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Search, Loader2, AlertCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -26,6 +27,7 @@ const TYPE_TABS: { label: string; value: InventoryType | 'ALL' }[] = [
 ];
 
 export function Inventory() {
+  const navigate = useNavigate();
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -118,7 +120,7 @@ export function Inventory() {
             : 0;
 
           return (
-            <Card key={item.id}>
+            <Card key={item.id} className="cursor-pointer active:scale-[0.98] transition-transform" onClick={() => navigate(`/inventory/${item.id}`)}>
               <CardContent className="p-4 space-y-3">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">

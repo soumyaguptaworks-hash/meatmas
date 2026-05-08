@@ -27,7 +27,10 @@ export function AppHeader() {
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const meta = PAGE_META[pathname] ?? { title: 'Factory', subtitle: '' };
+  const key = Object.keys(PAGE_META).find(
+    (k) => pathname === k || (k !== '/' && pathname.startsWith(k)),
+  );
+  const meta = (key ? PAGE_META[key] : null) ?? { title: 'Factory', subtitle: '' };
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {

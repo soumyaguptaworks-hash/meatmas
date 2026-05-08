@@ -944,6 +944,20 @@ export class FactoryController {
     return all;
   }
 
+  @Get('inventory/:id')
+  getInventoryItem(@Param('id') id: string) {
+    const all = [
+      ...inventoryStationary,
+      ...inventoryRawMaterial,
+      ...inventoryProcessed,
+      ...inventoryPacked,
+      ...inventoryWastage,
+    ];
+    const item = all.find((i) => i.id === id);
+    if (!item) throw new NotFoundException(`Inventory item ${id} not found`);
+    return item;
+  }
+
   // ── Batches ────────────────────────────────────────────────────────────────
 
   @Get('batches')
@@ -952,6 +966,13 @@ export class FactoryController {
       return batches.filter((b) => b.status === status);
     }
     return batches;
+  }
+
+  @Get('batches/:id')
+  getBatch(@Param('id') id: string) {
+    const batch = batches.find((b) => b.id === id);
+    if (!batch) throw new NotFoundException(`Batch ${id} not found`);
+    return batch;
   }
 
   @Post('batches')
@@ -1006,6 +1027,13 @@ export class FactoryController {
       return packagingOrders.filter((p) => p.status === status);
     }
     return packagingOrders;
+  }
+
+  @Get('packaging/:id')
+  getPackagingOrder(@Param('id') id: string) {
+    const order = packagingOrders.find((p) => p.id === id);
+    if (!order) throw new NotFoundException(`Packaging order ${id} not found`);
+    return order;
   }
 
   // ── Pipelines ──────────────────────────────────────────────────────────────

@@ -4,9 +4,13 @@ import { Login } from '@/pages/Login';
 import { VerifyOtp } from '@/pages/VerifyOtp';
 import { Home } from '@/pages/Home';
 import { Demands } from '@/pages/Demands';
+import { DemandDetail } from '@/pages/DemandDetail';
 import { Inventory } from '@/pages/Inventory';
+import { InventoryDetail } from '@/pages/InventoryDetail';
 import { Batches } from '@/pages/Batches';
+import { BatchDetail } from '@/pages/BatchDetail';
 import { Packaging } from '@/pages/Packaging';
+import { PackagingDetail } from '@/pages/PackagingDetail';
 import { Profile } from '@/pages/Profile';
 
 export const router = createBrowserRouter([
@@ -18,12 +22,16 @@ export const router = createBrowserRouter([
   {
     element: <AppShell />,
     children: [
-      { path: '/',          element: <Home /> },
-      { path: '/demands',   element: <Demands /> },
-      { path: '/inventory', element: <Inventory /> },
-      { path: '/batches',   element: <Batches /> },
-      { path: '/packaging', element: <Packaging /> },
-      { path: '/profile',   element: <Profile /> },
+      { path: '/',               element: <Home /> },
+      { path: '/demands',        element: <Demands /> },
+      { path: '/demands/:id',    element: <DemandDetail /> },
+      { path: '/inventory',      element: <Inventory /> },
+      { path: '/inventory/:id',  element: <InventoryDetail /> },
+      { path: '/batches',        element: <Batches /> },
+      { path: '/batches/:id',    element: <BatchDetail /> },
+      { path: '/packaging',      element: <Packaging /> },
+      { path: '/packaging/:id',  element: <PackagingDetail /> },
+      { path: '/profile',        element: <Profile /> },
     ],
   },
 ]);
