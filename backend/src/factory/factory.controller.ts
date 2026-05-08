@@ -866,9 +866,9 @@ export class FactoryController {
     demand.receivedByRole = user?.role;
     demand.receivedAt = now;
     demand.receivedQuantity = receivedQty;
-    if (body?.billData) {
-      demand.billData = body.billData;
-      demand.billFileName = body.billFileName ?? 'bill';
+    if (rawBody?.billData) {
+      demand.billData = rawBody.billData;
+      demand.billFileName = rawBody.billFileName ?? 'bill';
     }
 
     let remainder: Demand | undefined;

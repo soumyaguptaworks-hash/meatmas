@@ -24,7 +24,7 @@ export function AppShell() {
         <DesktopSidebar />
 
         {/* Scrollable main */}
-        <main className="flex-1 overflow-y-auto scrollbar-none bg-muted/30">
+        <main className="flex-1 overflow-y-auto scrollbar-none bg-[#f7f7f8]">
           <Outlet />
         </main>
       </div>

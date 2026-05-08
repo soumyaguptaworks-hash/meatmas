@@ -43,7 +43,7 @@ const STATUS_BADGE: Record<DemandStatus, { label: string; variant: 'warning' | '
   PENDING_MANAGER: { label: 'Pending Mgr',    variant: 'warning' },
   PENDING_ADMIN:   { label: 'Pending Admin',  variant: 'info' },
   APPROVED:        { label: 'Approved',       variant: 'success' },
-  COMPLETED:       { label: 'Completed',      variant: 'default' },
+  COMPLETED:       { label: 'Completed',      variant: 'secondary' },
   REJECTED:        { label: 'Rejected',       variant: 'destructive' },
   CANCELLED:       { label: 'Cancelled',      variant: 'secondary' },
 };
@@ -534,10 +534,31 @@ export function Demands() {
   }
 
   async function handleMarkReceived(id: string, billData?: string, billFileName?: string, receivedQuantity?: number) {
+    const demand = demands.find((d) => d.id === id);
     setActionId(id);
     try {
-      await factoryApi.completeDemand(id, billData, billFileName, receivedQuantity);
-      // reload from server so both the completed demand and any remainder appear correctly
+      const { data } = await factoryApi.completeDemand(id, billData, billFileName, receivedQuantity);
+
+      // If the backend didn't auto-create a remainder, create it from the frontend.
+      // Manager role → new demand starts at PENDING_ADMIN automatically.
+      if (
+        demand &&
+        receivedQuantity != null &&
+        receivedQuantity < demand.quantity &&
+        !data.remainder
+      ) {
+        const remainderQty = +(demand.quantity - receivedQuantity).toFixed(3);
+        await factoryApi.createDemand({
+          demandType: demand.demandType,
+          itemName: demand.itemName,
+          quantity: remainderQty,
+          unit: demand.unit,
+          priority: demand.priority,
+          dueDate: demand.dueDate,
+          notes: `Partial remainder: ${receivedQuantity} ${demand.unit} received of ${demand.quantity} ${demand.unit} ordered (demand ${id})`,
+        });
+      }
+
       loadDemands('ALL');
       setActiveTab('ALL');
     } finally {
@@ -577,8 +598,8 @@ export function Demands() {
               onClick={() => { setActiveTab(value); setTypeFilter('ALL'); }}
               className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
                 activeTab === value
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-secondary text-secondary-foreground'
+                  ? 'bg-[#d94040] text-white'
+                  : 'bg-gray-100 text-gray-600'
               }`}
             >
               {label}
@@ -600,8 +621,8 @@ export function Demands() {
                 onClick={() => setTypeFilter(value)}
                 className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors border ${
                   typeFilter === value
-                    ? 'bg-primary/10 text-primary border-primary/30'
-                    : 'bg-background text-muted-foreground border-border hover:bg-secondary'
+                    ? 'bg-[#d94040]/10 text-[#d94040] border-[#d94040]/30'
+                    : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'
                 }`}
               >
                 {label}

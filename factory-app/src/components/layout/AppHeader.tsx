@@ -1,17 +1,24 @@
 import { useState, useRef, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ChefHat, LogOut, User, ChevronDown } from 'lucide-react';
+import { Bell, Search, LogOut, User } from 'lucide-react';
 import { authApi } from '@/api/auth.api';
 import { useAuthStore } from '@/store/auth.store';
 
-const PAGE_TITLES: Record<string, string> = {
-  '/':          'Home',
-  '/demands':   'Demands',
-  '/inventory': 'Inventory',
-  '/batches':   'Batches',
-  '/packaging': 'Packaging',
-  '/profile':   'Profile',
+const PAGE_META: Record<string, { title: string; subtitle: string }> = {
+  '/':          { title: 'Home',      subtitle: 'Overview of your factory operations' },
+  '/demands':   { title: 'Demands',   subtitle: 'Manage and track production demands' },
+  '/inventory': { title: 'Inventory', subtitle: 'Monitor stock levels across categories' },
+  '/batches':   { title: 'Batches',   subtitle: 'Track production and processing batches' },
+  '/packaging': { title: 'Packaging', subtitle: 'Manage packaging orders and runs' },
+  '/profile':   { title: 'Profile',   subtitle: 'Your account settings' },
 };
+
+function getInitials(email: string) {
+  const parts = email.split('@')[0].split(/[._-]/);
+  return parts.length >= 2
+    ? (parts[0][0] + parts[1][0]).toUpperCase()
+    : email.slice(0, 2).toUpperCase();
+}
 
 export function AppHeader() {
   const { pathname } = useLocation();
@@ -20,9 +27,8 @@ export function AppHeader() {
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const title = PAGE_TITLES[pathname] ?? 'Factory';
+  const meta = PAGE_META[pathname] ?? { title: 'Factory', subtitle: '' };
 
-  // Close dropdown on outside click
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
@@ -41,76 +47,89 @@ export function AppHeader() {
     }
   }
 
-  function handleProfile() {
-    setOpen(false);
-    navigate('/profile');
-  }
-
   return (
     <header
-      className="shrink-0 bg-primary text-primary-foreground px-4 flex items-center justify-between"
+      className="flex items-center justify-between border-b border-gray-100 bg-white px-4 md:px-6 shrink-0"
       style={{
-        paddingTop: 'calc(env(safe-area-inset-top) + 0.75rem)',
-        paddingBottom: '0.75rem',
+        paddingTop: 'calc(env(safe-area-inset-top) + 0.875rem)',
+        paddingBottom: '0.875rem',
       }}
     >
-      <div className="flex items-center gap-2.5">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/20">
-          <ChefHat className="h-4 w-4" />
-        </div>
-        <div>
-          <p className="text-base font-bold leading-none">{title}</p>
-          <p className="text-[10px] text-primary-foreground/70 mt-0.5">
-            {user?.email ?? 'Factory'}
-          </p>
-        </div>
+      {/* Page title */}
+      <div>
+        <h1 className="text-base font-semibold text-gray-900 leading-none">{meta.title}</h1>
+        {meta.subtitle && (
+          <p className="text-xs text-gray-400 mt-0.5 hidden sm:block">{meta.subtitle}</p>
+        )}
       </div>
 
-      {/* User dropdown */}
-      <div className="relative" ref={dropdownRef}>
-        <button
-          onClick={() => setOpen((o) => !o)}
-          className="flex items-center gap-1.5 h-9 px-2.5 rounded-full bg-white/10 active:bg-white/20 transition-colors"
-          aria-label="User menu"
-          aria-expanded={open}
-        >
-          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-white/20">
-            <User className="h-3.5 w-3.5" />
-          </div>
-          <span className="text-xs font-medium hidden sm:inline max-w-[100px] truncate">
-            {user?.email?.split('@')[0] ?? 'User'}
-          </span>
-          <ChevronDown className={`h-3 w-3 transition-transform ${open ? 'rotate-180' : ''}`} />
+      {/* Right side */}
+      <div className="flex items-center gap-3">
+        {/* Search — desktop only */}
+        <div className="relative hidden md:flex items-center">
+          <Search className="absolute left-3 h-4 w-4 text-gray-400 pointer-events-none" />
+          <input
+            type="text"
+            placeholder="Search everything..."
+            className="h-9 w-64 rounded-full border border-gray-200 bg-gray-50 pl-9 pr-4 text-sm text-gray-700 placeholder:text-gray-400 focus:outline-none focus:border-gray-300 focus:bg-white transition-colors"
+          />
+        </div>
+
+        {/* Bell */}
+        <button className="relative flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-gray-400 hover:bg-gray-50 hover:text-gray-600 transition-colors">
+          <Bell className="h-[18px] w-[18px]" />
+          <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-[#d94040] border-2 border-white" />
         </button>
 
-        {open && (
-          <div className="absolute right-0 top-full mt-2 w-52 rounded-xl border bg-background shadow-lg overflow-hidden z-50 text-foreground">
-            {/* User info */}
-            <div className="px-4 py-3 border-b bg-muted/30">
-              <p className="text-sm font-semibold truncate">{user?.email ?? '—'}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {user?.role?.replace('_', ' ')} · Factory
+        <div className="h-6 w-px bg-gray-100" />
+
+        {/* User avatar — desktop is display-only (sidebar handles logout); mobile has dropdown */}
+        <div className="relative" ref={dropdownRef}>
+          <button
+            onClick={() => setOpen((o) => !o)}
+            className="flex items-center gap-2.5 md:pointer-events-none"
+            aria-label="User menu"
+            aria-expanded={open}
+          >
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#d94040]/15 text-[#d94040] text-xs font-semibold">
+              {user ? getInitials(user.email) : 'FA'}
+            </div>
+            <div className="hidden sm:block text-left">
+              <p className="text-xs font-semibold text-gray-800 leading-none">
+                {user?.email?.split('@')[0] ?? 'User'}
+              </p>
+              <p className="text-[10px] text-gray-400 mt-0.5 capitalize">
+                {user?.role?.toLowerCase() ?? 'staff'}
               </p>
             </div>
+          </button>
 
-            {/* Actions */}
-            <button
-              onClick={handleProfile}
-              className="flex w-full items-center gap-3 px-4 py-3 text-sm hover:bg-muted/50 transition-colors"
-            >
-              <User className="h-4 w-4 text-muted-foreground" />
-              My Profile
-            </button>
-
-            <button
-              onClick={handleLogout}
-              className="flex w-full items-center gap-3 px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors"
-            >
-              <LogOut className="h-4 w-4" />
-              Sign Out
-            </button>
-          </div>
-        )}
+          {/* Mobile-only dropdown */}
+          {open && (
+            <div className="md:hidden absolute right-0 top-full mt-2 w-52 rounded-xl border border-gray-100 bg-white shadow-lg overflow-hidden z-50">
+              <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
+                <p className="text-sm font-semibold truncate text-gray-900">{user?.email ?? '—'}</p>
+                <p className="text-xs text-gray-400 mt-0.5 capitalize">
+                  {user?.role?.replace('_', ' ')} · Factory
+                </p>
+              </div>
+              <button
+                onClick={() => { setOpen(false); navigate('/profile'); }}
+                className="flex w-full items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                <User className="h-4 w-4 text-gray-400" />
+                My Profile
+              </button>
+              <button
+                onClick={handleLogout}
+                className="flex w-full items-center gap-3 px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors"
+              >
+                <LogOut className="h-4 w-4" />
+                Sign Out
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );

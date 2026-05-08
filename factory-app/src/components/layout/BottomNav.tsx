@@ -13,7 +13,7 @@ const TABS = [
 export function BottomNav() {
   return (
     <nav
-      className="md:hidden shrink-0 border-t bg-background"
+      className="md:hidden shrink-0 border-t border-gray-100 bg-white"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       <div className="flex">
@@ -25,9 +25,7 @@ export function BottomNav() {
             className={({ isActive }) =>
               cn(
                 'flex flex-1 flex-col items-center gap-1 py-3 text-[10px] font-medium transition-colors',
-                isActive
-                  ? 'text-primary'
-                  : 'text-muted-foreground',
+                isActive ? 'text-[#d94040]' : 'text-gray-400',
               )
             }
           >
@@ -35,7 +33,7 @@ export function BottomNav() {
               <>
                 <span className={cn(
                   'flex h-8 w-8 items-center justify-center rounded-xl transition-colors',
-                  isActive && 'bg-primary/10',
+                  isActive && 'bg-[#d94040]/10',
                 )}>
                   <Icon className="h-5 w-5" />
                 </span>
