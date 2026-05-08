@@ -39,6 +39,8 @@ export interface Demand {
   receivedBy?: string;
   receivedByRole?: string;
   receivedAt?: string;
+  receivedQuantity?: number;
+  originalDemandId?: string;
   billData?: string;
   billFileName?: string;
   createdAt: string;
@@ -184,8 +186,8 @@ export const factoryApi = {
   rejectDemand: (id: string, comment: string) =>
     api.patch<Demand>(`/factory/demands/${id}/reject`, { comment }),
 
-  completeDemand: (id: string, billData?: string, billFileName?: string) =>
-    api.patch<Demand>(`/factory/demands/${id}/complete`, { billData, billFileName }),
+  completeDemand: (id: string, billData?: string, billFileName?: string, receivedQuantity?: number) =>
+    api.patch<{ completed: Demand; remainder?: Demand }>(`/factory/demands/${id}/complete`, { billData, billFileName, receivedQuantity }),
 
   // Inventory
   getInventory: (type?: InventoryType, search?: string) =>

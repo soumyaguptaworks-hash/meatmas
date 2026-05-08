@@ -332,15 +332,20 @@ function RejectModal({ demandId, onClose, onRejected }: RejectModalProps) {
 interface BillUploadModalProps {
   demand: Demand;
   onClose: () => void;
-  onConfirm: (id: string, billData?: string, billFileName?: string) => Promise<void>;
+  onConfirm: (id: string, billData?: string, billFileName?: string, receivedQuantity?: number) => Promise<void>;
 }
 
 function BillUploadModal({ demand, onClose, onConfirm }: BillUploadModalProps) {
   const [billData, setBillData] = useState<string | undefined>();
   const [billFileName, setBillFileName] = useState<string | undefined>();
   const [previewType, setPreviewType] = useState<'image' | 'pdf' | null>(null);
+  const [receivedQty, setReceivedQty] = useState<string>(String(demand.quantity));
   const [saving, setSaving] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const parsedQty = parseFloat(receivedQty) || 0;
+  const remainderQty = demand.quantity - parsedQty;
+  const isPartial = parsedQty > 0 && parsedQty < demand.quantity;
 
   function handleFile(file: File) {
     const isImage = file.type.startsWith('image/');
@@ -354,9 +359,10 @@ function BillUploadModal({ demand, onClose, onConfirm }: BillUploadModalProps) {
   }
 
   async function handleSubmit() {
+    if (parsedQty <= 0 || parsedQty > demand.quantity) return;
     setSaving(true);
     try {
-      await onConfirm(demand.id, billData, billFileName);
+      await onConfirm(demand.id, billData, billFileName, parsedQty);
       onClose();
     } finally {
       setSaving(false);
@@ -371,7 +377,7 @@ function BillUploadModal({ demand, onClose, onConfirm }: BillUploadModalProps) {
             <h2 className="font-semibold text-base flex items-center gap-2">
               <PackageCheck className="h-4 w-4 text-blue-500" /> Mark as Received
             </h2>
-            <p className="text-xs text-muted-foreground mt-0.5">{demand.itemName} · {demand.quantity} {demand.unit}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{demand.itemName} · Ordered: {demand.quantity} {demand.unit}</p>
           </div>
           <button onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-full bg-muted/60 hover:bg-muted">
             <X className="h-4 w-4" />
@@ -379,6 +385,29 @@ function BillUploadModal({ demand, onClose, onConfirm }: BillUploadModalProps) {
         </div>
 
         <div className="px-5 py-4 space-y-4">
+          {/* Quantity received */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              Quantity Received ({demand.unit})
+            </label>
+            <Input
+              type="number"
+              inputMode="decimal"
+              placeholder={String(demand.quantity)}
+              value={receivedQty}
+              min={0.01}
+              max={demand.quantity}
+              step="any"
+              onChange={(e) => setReceivedQty(e.target.value)}
+            />
+            {isPartial && (
+              <div className="flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-700">
+                <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                Remaining {remainderQty} {demand.unit} will be sent back for admin approval
+              </div>
+            )}
+          </div>
+
           <p className="text-sm text-muted-foreground">Attach the supplier bill or invoice (optional) before updating inventory.</p>
 
           {!billData ? (
@@ -428,7 +457,7 @@ function BillUploadModal({ demand, onClose, onConfirm }: BillUploadModalProps) {
           </button>
           <button
             onClick={handleSubmit}
-            disabled={saving}
+            disabled={saving || parsedQty <= 0 || parsedQty > demand.quantity}
             className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 text-white py-2.5 text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
           >
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <><PackageCheck className="h-4 w-4" /> Confirm Receipt</>}
@@ -446,6 +475,7 @@ export function Demands() {
   const isManager = user?.role === 'MANAGER';
 
   const [activeTab, setActiveTab] = useState<DemandStatus | 'ALL'>('ALL');
+  const [typeFilter, setTypeFilter] = useState<'ALL' | DemandType>('ALL');
   const [demands, setDemands] = useState<Demand[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -472,10 +502,13 @@ export function Demands() {
     ? demands
     : demands.filter((d) => d.requestedBy === user?.email);
 
-  const filtered = visibleDemands.filter((d) =>
-    d.itemName.toLowerCase().includes(search.toLowerCase()) ||
-    d.itemCode.toLowerCase().includes(search.toLowerCase()),
-  );
+  const filtered = visibleDemands.filter((d) => {
+    const matchesSearch =
+      d.itemName.toLowerCase().includes(search.toLowerCase()) ||
+      d.itemCode.toLowerCase().includes(search.toLowerCase());
+    const matchesType = activeTab !== 'ALL' || typeFilter === 'ALL' || d.demandType === typeFilter;
+    return matchesSearch && matchesType;
+  });
 
   async function handleApprove(id: string) {
     setActionId(id);
@@ -487,11 +520,15 @@ export function Demands() {
     }
   }
 
-  async function handleMarkReceived(id: string, billData?: string, billFileName?: string) {
+  async function handleMarkReceived(id: string, billData?: string, billFileName?: string, receivedQuantity?: number) {
     setActionId(id);
     try {
-      const { data } = await factoryApi.completeDemand(id, billData, billFileName);
-      setDemands((prev) => prev.map((d) => d.id === id ? data : d));
+      const { data } = await factoryApi.completeDemand(id, billData, billFileName, receivedQuantity);
+      setDemands((prev) => {
+        const updated = prev.map((d) => d.id === id ? data.completed : d);
+        if (data.remainder) updated.push(data.remainder);
+        return updated;
+      });
     } finally {
       setActionId(null);
     }
@@ -526,7 +563,7 @@ export function Demands() {
           {STATUS_TABS.map(({ label, value }) => (
             <button
               key={value}
-              onClick={() => setActiveTab(value)}
+              onClick={() => { setActiveTab(value); setTypeFilter('ALL'); }}
               className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
                 activeTab === value
                   ? 'bg-primary text-primary-foreground'
@@ -537,6 +574,30 @@ export function Demands() {
             </button>
           ))}
         </div>
+
+        {/* Type sub-filters — only shown under ALL tab */}
+        {activeTab === 'ALL' && (
+          <div className="flex gap-2 overflow-x-auto scrollbar-none pb-1">
+            {([
+              { value: 'ALL',          label: 'All Types' },
+              { value: 'RAW_MATERIAL', label: 'Raw Material' },
+              { value: 'STATIONARY',   label: 'Stationary' },
+              { value: 'PACKAGING',    label: 'Packaging' },
+            ] as { value: 'ALL' | DemandType; label: string }[]).map(({ value, label }) => (
+              <button
+                key={value}
+                onClick={() => setTypeFilter(value)}
+                className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors border ${
+                  typeFilter === value
+                    ? 'bg-primary/10 text-primary border-primary/30'
+                    : 'bg-background text-muted-foreground border-border hover:bg-secondary'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* List */}

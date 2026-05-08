@@ -50,6 +50,8 @@ interface Demand {
   receivedBy?: string;
   receivedByRole?: string;
   receivedAt?: string;
+  receivedQuantity?: number;
+  originalDemandId?: string;
   billData?: string;
   billFileName?: string;
   createdAt: string;
@@ -776,7 +778,7 @@ export class FactoryController {
   @Patch('demands/:id/complete')
   completeDemand(
     @Param('id') id: string,
-    @Body() body: { billData?: string; billFileName?: string },
+    @Body() body: { billData?: string; billFileName?: string; receivedQuantity?: number },
     @CurrentUser() user: { email: string; role: string; sub: string },
   ) {
     const demand = demands.find((d) => d.id === id);
@@ -784,6 +786,10 @@ export class FactoryController {
     if (demand.status !== 'APPROVED') {
       throw new NotFoundException(`Demand ${id} is not in APPROVED status`);
     }
+
+    const receivedQty = (body?.receivedQuantity != null && body.receivedQuantity > 0)
+      ? Math.min(body.receivedQuantity, demand.quantity)
+      : demand.quantity;
 
     // Determine which inventory array to update
     let targetArray: InventoryItem[];
@@ -805,9 +811,8 @@ export class FactoryController {
     );
 
     if (existing) {
-      existing.currentStock += demand.quantity;
+      existing.currentStock += receivedQty;
       existing.lastUpdated = new Date().toISOString();
-      // Recalculate stock level
       const pct = existing.currentStock / existing.maxThreshold;
       existing.stockLevel =
         pct <= 0.1 ? 'CRITICAL' :
@@ -820,10 +825,10 @@ export class FactoryController {
         itemName: demand.itemName,
         category: demand.demandType.replace('_', ' '),
         inventoryType,
-        currentStock: demand.quantity,
+        currentStock: receivedQty,
         unit: demand.unit,
         minThreshold: 0,
-        maxThreshold: demand.quantity * 3,
+        maxThreshold: receivedQty * 3,
         stockLevel: 'ADEQUATE',
         lastUpdated: new Date().toISOString(),
       };
@@ -836,11 +841,36 @@ export class FactoryController {
     demand.receivedBy = user?.email;
     demand.receivedByRole = user?.role;
     demand.receivedAt = now;
+    demand.receivedQuantity = receivedQty;
     if (body?.billData) {
       demand.billData = body.billData;
       demand.billFileName = body.billFileName ?? 'bill';
     }
-    return demand;
+
+    let remainder: Demand | undefined;
+    const remainderQty = demand.quantity - receivedQty;
+    if (remainderQty > 0) {
+      remainder = {
+        id: `d${Date.now()}`,
+        demandType: demand.demandType,
+        itemCode: demand.itemCode,
+        itemName: demand.itemName,
+        quantity: remainderQty,
+        unit: demand.unit,
+        priority: demand.priority,
+        status: 'PENDING_ADMIN',
+        requestedBy: demand.requestedBy,
+        requestedByRole: demand.requestedByRole,
+        dueDate: demand.dueDate,
+        notes: `Partial remainder from demand ${demand.id} (${receivedQty} ${demand.unit} received of ${demand.quantity} ${demand.unit} requested)`,
+        originalDemandId: demand.id,
+        createdAt: now,
+        updatedAt: now,
+      };
+      demands.push(remainder);
+    }
+
+    return { completed: demand, remainder };
   }
 
   // ── Inventory ──────────────────────────────────────────────────────────────

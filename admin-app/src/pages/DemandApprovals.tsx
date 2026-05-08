@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { CheckCircle2, XCircle, ClipboardList, Clock, Loader2, RefreshCw, MessageSquare, X, User, ShieldCheck, PackageCheck, FileText, Download } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { CheckCircle2, XCircle, ClipboardList, Clock, Loader2, RefreshCw, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -38,6 +39,8 @@ interface Demand {
   receivedBy?: string;
   receivedByRole?: string;
   receivedAt?: string;
+  receivedQuantity?: number;
+  originalDemandId?: string;
   billData?: string;
   billFileName?: string;
   createdAt: string;
@@ -69,196 +72,6 @@ const STATUS_TABS: { key: string; label: string }[] = [
   { key: 'REJECTED',       label: 'Rejected' },
 ];
 
-// ─── Detail Drawer ─────────────────────────────────────────────────────────
-
-function DemandDetailDrawer({ demand, onClose }: { demand: Demand; onClose: () => void }) {
-  const isImage = demand.billData?.startsWith('data:image');
-  const isPdf = demand.billData?.startsWith('data:application/pdf');
-
-  function downloadBill() {
-    if (!demand.billData) return;
-    const a = document.createElement('a');
-    a.href = demand.billData;
-    a.download = demand.billFileName ?? 'bill';
-    a.click();
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex justify-end" onClick={onClose}>
-      <div
-        className="relative h-full w-full max-w-lg bg-white shadow-2xl overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 border-b bg-white">
-          <div>
-            <h2 className="font-semibold text-gray-800 text-base">Demand Details</h2>
-            <p className="text-xs text-gray-400 font-mono uppercase mt-0.5">{demand.id}</p>
-          </div>
-          <button
-            onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-
-        <div className="px-6 py-5 space-y-6">
-          {/* Status badge */}
-          <div className="flex items-center gap-2">
-            <Badge variant={STATUS_VARIANT[demand.status]}>{demand.status.replace(/_/g, ' ')}</Badge>
-            <Badge variant={PRIORITY_VARIANT[demand.priority]}>{demand.priority}</Badge>
-          </div>
-
-          {/* Item info */}
-          <section className="space-y-3">
-            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Item</h3>
-            <div className="rounded-xl bg-gray-50 p-4 space-y-2">
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-500">Name</span>
-                <span className="text-sm font-semibold text-gray-800">{demand.itemName}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-500">Code</span>
-                <span className="text-xs font-mono text-gray-600">{demand.itemCode}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-500">Type</span>
-                <span className="text-sm text-gray-700">{demand.demandType.replace(/_/g, ' ')}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-500">Quantity</span>
-                <span className="text-sm font-semibold text-gray-800">{demand.quantity} {demand.unit}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-500">Due Date</span>
-                <span className="text-sm text-gray-700">{new Date(demand.dueDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
-              </div>
-              {demand.notes && (
-                <div className="pt-1 border-t">
-                  <span className="text-xs text-gray-400">Notes: </span>
-                  <span className="text-xs text-gray-600">{demand.notes}</span>
-                </div>
-              )}
-            </div>
-          </section>
-
-          {/* Requested by */}
-          <section className="space-y-3">
-            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide flex items-center gap-1.5">
-              <User className="h-3.5 w-3.5" /> Requested By
-            </h3>
-            <div className="rounded-xl bg-gray-50 p-4 space-y-2">
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-500">Email</span>
-                <span className="text-sm text-gray-800">{demand.requestedBy}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-500">Role</span>
-                <span className="text-sm text-gray-700">{demand.requestedByRole}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-500">Raised On</span>
-                <span className="text-sm text-gray-700">{new Date(demand.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
-              </div>
-            </div>
-          </section>
-
-          {/* Approved by */}
-          {demand.approvedBy && (
-            <section className="space-y-3">
-              <h3 className="text-xs font-semibold text-emerald-600 uppercase tracking-wide flex items-center gap-1.5">
-                <ShieldCheck className="h-3.5 w-3.5" /> Approved By
-              </h3>
-              <div className="rounded-xl bg-emerald-50 border border-emerald-100 p-4 space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-500">Email</span>
-                  <span className="text-sm font-medium text-gray-800">{demand.approvedBy}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-500">Role</span>
-                  <span className="text-sm text-gray-700">{demand.approvedByRole}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-500">User ID</span>
-                  <span className="text-xs font-mono text-gray-500">{demand.approvedById}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-500">Approved At</span>
-                  <span className="text-sm text-gray-700">{new Date(demand.approvedAt!).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
-                </div>
-              </div>
-            </section>
-          )}
-
-          {/* Received by */}
-          {demand.receivedBy && (
-            <section className="space-y-3">
-              <h3 className="text-xs font-semibold text-blue-600 uppercase tracking-wide flex items-center gap-1.5">
-                <PackageCheck className="h-3.5 w-3.5" /> Received By
-              </h3>
-              <div className="rounded-xl bg-blue-50 border border-blue-100 p-4 space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-500">Email</span>
-                  <span className="text-sm font-medium text-gray-800">{demand.receivedBy}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-500">Role</span>
-                  <span className="text-sm text-gray-700">{demand.receivedByRole}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-500">Received At</span>
-                  <span className="text-sm text-gray-700">{new Date(demand.receivedAt!).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
-                </div>
-              </div>
-            </section>
-          )}
-
-          {/* Bill */}
-          {demand.billData ? (
-            <section className="space-y-3">
-              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide flex items-center gap-1.5">
-                <FileText className="h-3.5 w-3.5" /> Supplier Bill
-              </h3>
-              <div className="rounded-xl border overflow-hidden">
-                {isImage && (
-                  <img src={demand.billData} alt="supplier bill" className="w-full object-contain max-h-72" />
-                )}
-                {isPdf && (
-                  <div className="flex items-center gap-3 px-4 py-3 bg-gray-50">
-                    <FileText className="h-8 w-8 text-red-500 shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{demand.billFileName ?? 'bill.pdf'}</p>
-                      <p className="text-xs text-gray-400">PDF Document</p>
-                    </div>
-                  </div>
-                )}
-                <button
-                  onClick={downloadBill}
-                  className="flex w-full items-center justify-center gap-2 py-2.5 bg-gray-50 border-t text-xs font-medium text-gray-600 hover:bg-gray-100 transition-colors"
-                >
-                  <Download className="h-3.5 w-3.5" /> Download Bill
-                </button>
-              </div>
-            </section>
-          ) : (
-            demand.status === 'COMPLETED' && (
-              <div className="rounded-xl border border-dashed border-gray-200 px-4 py-5 text-center text-sm text-gray-400">
-                No bill uploaded for this demand.
-              </div>
-            )
-          )}
-
-          {demand.rejectionComment && (
-            <section className="rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-700">
-              <span className="font-medium">Rejection reason: </span>{demand.rejectionComment}
-            </section>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // ─── Reject Modal ──────────────────────────────────────────────────────────
 
@@ -307,6 +120,7 @@ function RejectModal({ demand, onClose, onConfirm }: RejectModalProps) {
 // ─── Main Component ────────────────────────────────────────────────────────
 
 export function DemandApprovals() {
+  const navigate = useNavigate();
   const [demands, setDemands] = useState<Demand[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -315,7 +129,7 @@ export function DemandApprovals() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [rejectTarget, setRejectTarget] = useState<Demand | null>(null);
-  const [selectedDemand, setSelectedDemand] = useState<Demand | null>(null);
+  const [typeFilter, setTypeFilter] = useState<'ALL' | 'RAW_MATERIAL' | 'STATIONARY' | 'PACKAGING'>('ALL');
 
   async function fetchDemands() {
     setLoading(true);
@@ -366,9 +180,13 @@ export function DemandApprovals() {
     }
   }
 
-  const filtered = tab === 'ALL'
-    ? demands
-    : demands.filter((d) => d.status === tab);
+  const filtered = (() => {
+    let list = tab === 'ALL' ? demands : demands.filter((d) => d.status === tab);
+    if (tab === 'PENDING_ADMIN' && typeFilter !== 'ALL') {
+      list = list.filter((d) => d.demandType === typeFilter);
+    }
+    return list;
+  })();
 
   const counts: Record<string, number> = {
     PENDING_ADMIN: demands.filter((d) => d.status === 'PENDING_ADMIN').length,
@@ -385,14 +203,6 @@ export function DemandApprovals() {
           demand={rejectTarget}
           onClose={() => setRejectTarget(null)}
           onConfirm={handleReject}
-        />
-      )}
-
-      {/* Detail drawer */}
-      {selectedDemand && (
-        <DemandDetailDrawer
-          demand={selectedDemand}
-          onClose={() => setSelectedDemand(null)}
         />
       )}
 
@@ -417,7 +227,7 @@ export function DemandApprovals() {
       </div>
 
       {/* Tabs + refresh */}
-      <Card className="p-4">
+      <Card className="p-4 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5 flex-wrap">
             {STATUS_TABS.map(({ key, label }) => {
@@ -425,7 +235,7 @@ export function DemandApprovals() {
               return (
                 <button
                   key={key}
-                  onClick={() => setTab(key)}
+                  onClick={() => { setTab(key); setTypeFilter('ALL'); }}
                   className={`rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-all flex items-center gap-1.5 ${
                     tab === key
                       ? 'bg-primary text-white shadow-sm'
@@ -452,6 +262,39 @@ export function DemandApprovals() {
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} /> Refresh
           </Button>
         </div>
+
+        {/* Sub-filters — only visible on Needs Approval tab */}
+        {tab === 'PENDING_ADMIN' && (
+          <div className="flex items-center gap-2 pt-1 border-t border-gray-100">
+            <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mr-1">Filter by type:</span>
+            {([
+              { key: 'ALL',          label: 'All' },
+              { key: 'RAW_MATERIAL', label: 'Raw Material' },
+              { key: 'STATIONARY',   label: 'Stationary' },
+              { key: 'PACKAGING',    label: 'Packaging' },
+            ] as const).map(({ key, label }) => {
+              const cnt = key === 'ALL'
+                ? demands.filter(d => d.status === 'PENDING_ADMIN').length
+                : demands.filter(d => d.status === 'PENDING_ADMIN' && d.demandType === key).length;
+              return (
+                <button
+                  key={key}
+                  onClick={() => setTypeFilter(key)}
+                  className={`rounded-lg px-3 py-1 text-xs font-medium transition-all flex items-center gap-1 ${
+                    typeFilter === key
+                      ? 'bg-amber-100 text-amber-700 border border-amber-200'
+                      : 'bg-gray-50 text-gray-500 border border-gray-100 hover:bg-gray-100'
+                  }`}
+                >
+                  {label}
+                  <span className={`text-[10px] font-bold ${typeFilter === key ? 'text-amber-600' : 'text-gray-400'}`}>
+                    {cnt}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </Card>
 
       {/* Success / error banners */}
@@ -510,12 +353,11 @@ export function DemandApprovals() {
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {filtered.map((d) => {
-                  const isClickable = d.status === 'COMPLETED';
                   return (
                   <tr
                     key={d.id}
-                    onClick={() => isClickable && setSelectedDemand(d)}
-                    className={`hover:bg-gray-50/50 transition-colors group ${isClickable ? 'cursor-pointer' : ''}`}
+                    onClick={() => navigate(`/demand-approvals/${d.id}`)}
+                    className="hover:bg-gray-50/50 transition-colors cursor-pointer"
                   >
                     <td className="px-5 py-4 font-mono text-xs text-gray-400 uppercase">{d.id}</td>
                     <td className="px-5 py-4 text-xs text-gray-500">
@@ -547,9 +389,17 @@ export function DemandApprovals() {
                       <Badge variant={PRIORITY_VARIANT[d.priority]}>{d.priority}</Badge>
                     </td>
                     <td className="px-5 py-4">
-                      <Badge variant={STATUS_VARIANT[d.status]}>
-                        {d.status.replace('_', ' ')}
-                      </Badge>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <Badge variant={STATUS_VARIANT[d.status]}>
+                          {d.status.replace('_', ' ')}
+                        </Badge>
+                        {d.status === 'COMPLETED' && d.receivedQuantity != null && d.receivedQuantity < d.quantity && (
+                          <Badge variant="warning">Partial</Badge>
+                        )}
+                        {d.originalDemandId && (
+                          <Badge variant="info">Remainder</Badge>
+                        )}
+                      </div>
                     </td>
                     <td className="px-5 py-4">
                       {d.status === 'PENDING_ADMIN' && (
@@ -592,7 +442,12 @@ export function DemandApprovals() {
                       )}
                       {d.status === 'COMPLETED' && (
                         <span className="text-xs text-blue-500 font-medium flex items-center gap-1 underline underline-offset-2 decoration-dotted">
-                          <CheckCircle2 className="h-3.5 w-3.5" /> Completed · View
+                          <CheckCircle2 className="h-3.5 w-3.5" /> Completed · View details
+                        </span>
+                      )}
+                      {(d.status === 'DRAFT' || d.status === 'PENDING_MANAGER' || d.status === 'CANCELLED') && (
+                        <span className="text-xs text-gray-400 font-medium flex items-center gap-1">
+                          View details →
                         </span>
                       )}
                     </td>

@@ -4,6 +4,7 @@ import { Dashboard } from '@/pages/Dashboard';
 import { UserManagement } from '@/pages/UserManagement';
 import { ItemMaster } from '@/pages/ItemMaster';
 import { DemandApprovals } from '@/pages/DemandApprovals';
+import { DemandDetail } from '@/pages/DemandDetail';
 import { ProcessingPipeline } from '@/pages/ProcessingPipeline';
 import { Login } from '@/pages/Login';
 import { VerifyOtp } from '@/pages/VerifyOtp';
@@ -17,7 +18,8 @@ export const router = createBrowserRouter([
       { path: '/',                  element: <Dashboard /> },
       { path: '/users',             element: <UserManagement /> },
       { path: '/item-master',       element: <ItemMaster /> },
-      { path: '/demand-approvals',      element: <DemandApprovals /> },
+      { path: '/demand-approvals',        element: <DemandApprovals /> },
+      { path: '/demand-approvals/:id',   element: <DemandDetail /> },
       { path: '/processing-pipeline',   element: <ProcessingPipeline /> },
     ],
   },
